@@ -141,7 +141,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 const S={
   projectName:'새 프로젝트',
   system:'booster',
-  pump:{count:2,pressure:7,flow:300,mainPipe:'100A'},
+  pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A'},
   building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5},
   groups:[]
 };
@@ -158,27 +158,29 @@ function needsPRV(floor){
 function calcValves(){
   const P=S.pump, B=S.building, G=S.groups;
   const isBst=S.system==='booster';
+  const inletPipe=P.inletPipe||'50A';
+  const pumpPipe=P.pumpPipe||'65A';
   const list=[];
   let no=1;
   function add(pos,name,spec,pipe,qty,note=''){list.push({no:no++,pos,name,spec,pipe,qty,note});}
 
   if(isBst){
-    add('수도 인입부','게이트밸브','게이트밸브(인입차단)',P.mainPipe,1,'수도계량기 직후');
-    add('수도 인입부','체크밸브','체크밸브(역류방지)',P.mainPipe,1,'저수조 입구 전');
+    add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
+    add('수도 인입부','체크밸브','체크밸브(역류방지)',inletPipe,1,'저수조 입구 전');
     add('저수조 내부','볼탭','볼탭(전동밸브)','25A',1,'수위 조절');
-    add('저수조 출구','게이트밸브','게이트밸브(출구공통)',P.mainPipe,1,'저수조 출구');
-    add('펌프 흡입측','게이트밸브','게이트밸브',P.mainPipe,P.count,`×${P.count}대`);
-    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',P.mainPipe,P.count,`×${P.count}대`);
-    add('펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입)',P.mainPipe,P.count,`×${P.count}대`);
-    add('펌프 토출측','게이트밸브','게이트밸브',P.mainPipe,P.count,`×${P.count}대`);
-    add('펌프 토출측','체크밸브','체크밸브',P.mainPipe,P.count,`×${P.count}대`);
-    add('펌프 토출측','플렉시블조인트','플렉시블조인트(토출)',P.mainPipe,P.count,`×${P.count}대`);
+    add('저수조 출구','게이트밸브','게이트밸브(출구공통)',pumpPipe,1,'저수조 출구');
+    add('펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`);
+    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,P.count,`×${P.count}대`);
+    add('펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입)',pumpPipe,P.count,`×${P.count}대`);
+    add('펌프 토출측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`);
+    add('펌프 토출측','체크밸브','체크밸브',pumpPipe,P.count,`×${P.count}대`);
+    add('펌프 토출측','플렉시블조인트','플렉시블조인트(토출)',pumpPipe,P.count,`×${P.count}대`);
     add('토출 헤더','압력계','압력계',P.mainPipe,1,'');
     add('토출 헤더','수격방지기','수격방지기',P.mainPipe,1,'');
-    add('비상 바이패스','게이트밸브','게이트밸브(비상급수용)',P.mainPipe,2,'평상시 닫힘');
+    add('비상 바이패스','게이트밸브','게이트밸브(비상급수용)',pumpPipe,2,'평상시 닫힘');
   } else {
-    add('고가수조 인입','게이트밸브','게이트밸브(인입차단)',P.mainPipe,1,'');
-    add('고가수조 인입','체크밸브','체크밸브(역류방지)',P.mainPipe,1,'');
+    add('고가수조 인입','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'');
+    add('고가수조 인입','체크밸브','체크밸브(역류방지)',inletPipe,1,'');
     add('고가수조 내부','볼탭','볼탭','25A',1,'수위 조절');
     add('고가수조 출구','게이트밸브','게이트밸브(출구공통)',P.mainPipe,1,'');
   }
@@ -190,17 +192,24 @@ function calcValves(){
   add('메인 수직관','신축이음','벨로우즈형 신축이음',P.mainPipe,exCnt,`${B.floors}층÷3=${exCnt}개`);
 
   for(const g of G){
-    add(`${g.name} 분기`,'볼밸브','볼밸브(분기차단)',g.pipe,1,'분기 차단');
+    add(`${g.name} 입상관`,'볼밸브','볼밸브(입상관 차단)',g.pipe,1,'메인 분기');
     if(g.prv){
-      add(`${g.name} PRV 전후`,'게이트밸브','게이트밸브(PRV 전후)',g.pipe,2,'PRV 전·후');
+      add(`${g.name} PRV 입구`,'게이트밸브','게이트밸브(입구차단)',g.pipe,1,'PRV 입구');
+      add(`${g.name} PRV`,'Y형 스트레이너','Y형 스트레이너(시트보호)',g.pipe,1,'감압밸브 전');
+      add(`${g.name} PRV`,'압력계','압력계(1차압)',g.pipe,1,'PRV 전');
       add(`${g.name} PRV`,'감압밸브',`감압밸브(PRV)`,g.pipe,1,`설정압 ${B.prvPressure}kgf/cm²`);
+      add(`${g.name} PRV`,'압력계','압력계(2차압)',g.pipe,1,'PRV 후');
+      add(`${g.name} PRV 출구`,'게이트밸브','게이트밸브(출구차단)',g.pipe,1,'PRV 출구');
       add(`${g.name} 바이패스`,'게이트밸브','게이트밸브(바이패스)',g.pipe,2,'바이패스 전·후');
       add(`${g.name} 바이패스`,'글로브밸브','글로브밸브(유량조절)',g.pipe,1,'바이패스 조절');
     }
-    add(`${g.name} 최고점`,'공기빼기밸브','자동공기빼기밸브','15A',1,'');
-    add(`${g.name} 최저점`,'배수밸브','배수밸브','25A',1,'');
+    add(`${g.name} 최상부`,'공기빼기밸브','자동공기빼기밸브','15A',1,'입상관 최상부');
+    add(`${g.name} 최하부`,'배수밸브','배수밸브','25A',1,'입상관 최하부');
+    for(const fp of (g.floorPipes||[])){
+      add(`${g.name} ${fp.floorNo}층 주관`,'볼밸브',`볼밸브(${fp.floorNo}층 주관 차단)`,fp.pipe||g.pipe,+fp.qty||1,'층별 주관');
+    }
     for(const z of g.zones){
-      add(`${g.name} > ${z.name}`,'볼밸브','볼밸브(Zone 차단)',z.pipe,1,'Zone 차단');
+      add(`${g.name} > ${z.name}`,'볼밸브','볼밸브(화장실 차단)',z.pipe,1,'화장실 차단');
     }
   }
 
@@ -273,6 +282,18 @@ function renderSettings(){
         ${PIPES.map(p=>`<option${p===P.mainPipe?' selected':''}>${p}</option>`).join('')}
       </select>
     </div>
+    <div class="form-row">
+      <span class="form-label">펌프 접속 관경</span>
+      <select onchange="setPump('pumpPipe',this.value)">
+        ${['40A','50A','65A','80A','100A'].map(p=>`<option${p===(P.pumpPipe||'65A')?' selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <span class="form-label">수도 인입관 관경</span>
+      <select onchange="setPump('inletPipe',this.value)">
+        ${['25A','32A','40A','50A','65A','80A'].map(p=>`<option${p===(P.inletPipe||'50A')?' selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
   </div>`;
 
   // Building
@@ -319,21 +340,14 @@ function renderSettings(){
     </div>`;
   if(!S.groups.length) h+=`<div style="color:var(--text2);font-size:13px;padding:12px 0">그룹을 추가하세요.</div>`;
   for(const g of S.groups){
-    const fp=floorPressure(g.floor||1), over=fp>B.targetPressure;
+    const fps=g.floorPipes||[];
+    const floorBVs=fps.reduce((s,fp)=>s+(+fp.qty||0),0);
     h+=`<div class="group-card">
       <div class="group-hdr">
-        <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="그룹명">
-        <div class="form-row" style="margin:0;gap:6px">
-          <select onchange="setGroupVal('${g.id}','pipe',this.value)">
-            ${PIPES.map(p=>`<option${p===g.pipe?' selected':''}>${p}</option>`).join('')}
-          </select>
-          <input class="form-inp sm" type="number" value="${g.flow}" placeholder="유량" onchange="setGroupVal('${g.id}','flow',+this.value)" style="width:70px"> L/min
-          <div style="display:flex;align-items:center;gap:4px">
-            <span style="font-size:11px;color:var(--text2)">설치층</span>
-            <input class="form-inp" type="number" min="1" value="${g.floor||1}" onchange="setGroupFloor('${g.id}',+this.value)" style="width:55px">층
-          </div>
-          ${over?`<span class="warn-chip">압력초과! ${fp.toFixed(2)}kgf</span>`:`<span class="ok-chip">${fp.toFixed(2)}kgf</span>`}
-        </div>
+        <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="그룹명(입상관)">
+        <select onchange="setGroupVal('${g.id}','pipe',this.value)">
+          ${PIPES.map(p=>`<option${p===g.pipe?' selected':''}>${p}</option>`).join('')}
+        </select>
         <label class="prv-check">
           <input type="checkbox" ${g.prv?'checked':''} onchange="setGroupVal('${g.id}','prv',this.checked)">
           <span style="color:var(--warn)">감압밸브(PRV)</span>
@@ -342,17 +356,35 @@ function renderSettings(){
       </div>
       <div class="zone-list">
         <div class="fr" style="gap:6px;margin-bottom:6px">
-          <span style="font-size:11px;color:var(--text2)">Zone</span>
-          <button class="btn btn-ghost btn-sm" onclick="addZone('${g.id}')">+ Zone 추가</button>
+          <span style="font-size:11px;color:var(--text2);font-weight:600">층별 주관</span>
+          <button class="btn btn-ghost btn-sm" onclick="addFloorPipe('${g.id}')">+ 층 추가</button>
+          ${floorBVs?`<span style="font-size:10px;color:#bc8cff;margin-left:4px">BV ${floorBVs}개</span>`:''}
+        </div>
+        ${fps.map((fp,fi)=>`<div class="zone-row">
+          <input class="zone-inp" type="number" min="1" value="${fp.floorNo||fi+1}" placeholder="층" onchange="setFloorPipeProp('${g.id}',${fi},'floorNo',+this.value)" style="width:52px">층
+          <select onchange="setFloorPipeProp('${g.id}',${fi},'pipe',this.value)">
+            ${PIPES.map(p=>`<option${p===fp.pipe?' selected':''}>${p}</option>`).join('')}
+          </select>
+          <span style="font-size:11px;color:var(--text2)">수량</span>
+          <input class="zone-inp" type="number" min="1" value="${fp.qty||1}" onchange="setFloorPipeProp('${g.id}',${fi},'qty',+this.value)" style="width:46px">
+          <button class="btn btn-danger btn-sm" onclick="delFloorPipe('${g.id}',${fi})">✕</button>
+        </div>`).join('')}
+        ${!fps.length?`<span style="font-size:11px;color:var(--text2)">층별 주관 없음</span>`:''}
+      </div>
+      <div class="zone-list" style="margin-top:6px">
+        <div class="fr" style="gap:6px;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--text2);font-weight:600">화장실(Zone)</span>
+          <button class="btn btn-ghost btn-sm" onclick="addZone('${g.id}')">+ 화장실 추가</button>
+          ${g.zones.length?`<span style="font-size:10px;color:#bc8cff;margin-left:4px">BV ${g.zones.length}개</span>`:''}
         </div>
         ${g.zones.map((z,zi)=>`<div class="zone-row">
-          <input class="zone-inp" value="${esc(z.name)}" placeholder="Zone명" onchange="setZoneProp('${g.id}',${zi},'name',this.value)">
+          <input class="zone-inp" value="${esc(z.name)}" placeholder="화장실명" onchange="setZoneProp('${g.id}',${zi},'name',this.value)">
           <select onchange="setZoneProp('${g.id}',${zi},'pipe',this.value)">
             ${PIPES.map(p=>`<option${p===z.pipe?' selected':''}>${p}</option>`).join('')}
           </select>
           <button class="btn btn-danger btn-sm" onclick="delZone('${g.id}',${zi})">✕</button>
         </div>`).join('')}
-        ${!g.zones.length?`<span style="font-size:11px;color:var(--text2)">Zone 없음</span>`:''}
+        ${!g.zones.length?`<span style="font-size:11px;color:var(--text2)">화장실 없음</span>`:''}
       </div>
     </div>`;
   }
@@ -372,28 +404,28 @@ function symGV(x,y,s=10,lbl='GV'){
   return `<g>
     <polygon points="${x-s},${y-s} ${x},${y} ${x-s},${y+s}" fill="${SC.gv}" opacity=".9"/>
     <polygon points="${x+s},${y-s} ${x},${y} ${x+s},${y+s}" fill="${SC.gv}" opacity=".9"/>
-    ${svgText(x,y+s+11,lbl,SC.gv,8)}
+    ${svgText(x+s+9,y+4,lbl,SC.gv,8,'start')}
   </g>`;
 }
 function symBV(x,y,s=10,lbl='BV'){
   return `<g>
     <circle cx="${x}" cy="${y}" r="${s}" fill="${SC.bv}" fill-opacity=".2" stroke="${SC.bv}" stroke-width="1.5"/>
     <line x1="${x-s}" y1="${y}" x2="${x+s}" y2="${y}" stroke="${SC.bv}" stroke-width="3"/>
-    ${svgText(x,y+s+11,lbl,SC.bv,8)}
+    ${svgText(x+s+9,y+4,lbl,SC.bv,8,'start')}
   </g>`;
 }
 function symCV(x,y,s=10,lbl='CV'){
   return `<g>
     <circle cx="${x}" cy="${y}" r="${s}" fill="none" stroke="${SC.cv}" stroke-width="1.5"/>
     <polygon points="${x-4},${y-7} ${x+8},${y} ${x-4},${y+7}" fill="${SC.cv}"/>
-    ${svgText(x,y+s+11,lbl,SC.cv,8)}
+    ${svgText(x+s+9,y+4,lbl,SC.cv,8,'start')}
   </g>`;
 }
 function symPRV(x,y,s=12,lbl='PRV'){
   return `<g>
     <polygon points="${x},${y-s} ${x+s},${y} ${x},${y+s} ${x-s},${y}" fill="${SC.prv}" fill-opacity=".25" stroke="${SC.prv}" stroke-width="1.5"/>
     ${svgText(x,y+4,'P',SC.prv,9)}
-    ${svgText(x,y+s+11,lbl,SC.prv,8)}
+    ${svgText(x+s+9,y+4,lbl,SC.prv,8,'start')}
   </g>`;
 }
 function symST(x,y,s=11){
@@ -401,7 +433,7 @@ function symST(x,y,s=11){
     <rect x="${x-s}" y="${y-6}" width="${s*2}" height="12" fill="${SC.st}" fill-opacity=".15" stroke="${SC.st}" stroke-width="1.5" rx="2"/>
     <line x1="${x}" y1="${y+6}" x2="${x+7}" y2="${y+16}" stroke="${SC.st}" stroke-width="1.5"/>
     ${svgText(x,y+4,'Y',SC.st,8)}
-    ${svgText(x,y+s+14,'ST',SC.st,8)}
+    ${svgText(x+s+9,y+4,'ST',SC.st,8,'start')}
   </g>`;
 }
 function symPump(x,y,r=18,lbl='펌프'){
@@ -416,28 +448,28 @@ function symAV(x,y,lbl='AV'){
   return `<g>
     <polygon points="${x},${y-12} ${x-7},${y+6} ${x+7},${y+6}" fill="${SC.av}" fill-opacity=".8"/>
     <line x1="${x}" y1="${y+6}" x2="${x}" y2="${y+14}" stroke="${SC.av}" stroke-width="2"/>
-    ${svgText(x,y+23,lbl,SC.av,8)}
+    ${svgText(x+10,y+4,lbl,SC.av,8,'start')}
   </g>`;
 }
 function symDV(x,y,lbl='DV'){
   return `<g>
     <polygon points="${x},${y+12} ${x-7},${y-6} ${x+7},${y-6}" fill="${SC.dv}" fill-opacity=".8"/>
     <line x1="${x}" y1="${y-14}" x2="${x}" y2="${y-6}" stroke="${SC.dv}" stroke-width="2"/>
-    ${svgText(x,y+23,lbl,SC.dv,8)}
+    ${svgText(x+10,y+4,lbl,SC.dv,8,'start')}
   </g>`;
 }
-function symPG(x,y){
+function symPG(x,y,lbl='PG'){
   return `<g>
     <circle cx="${x}" cy="${y}" r="10" fill="${SC.pg}" fill-opacity=".2" stroke="${SC.pg}" stroke-width="1.5"/>
     <line x1="${x-4}" y1="${y+3}" x2="${x+5}" y2="${y-4}" stroke="${SC.pg}" stroke-width="1.5"/>
-    ${svgText(x,y+20,'PG',SC.pg,8)}
+    ${svgText(x+14,y+4,lbl,SC.pg,8,'start')}
   </g>`;
 }
 function symWH(x,y){
   return `<g>
     <rect x="${x-8}" y="${y-14}" width="16" height="20" rx="8" fill="${SC.wh}" fill-opacity=".2" stroke="${SC.wh}" stroke-width="1.5"/>
     <rect x="${x-4}" y="${y+6}" width="8" height="5" fill="${SC.wh}" fill-opacity=".6"/>
-    ${svgText(x,y+25,'WH',SC.wh,8)}
+    ${svgText(x+12,y+4,'WH',SC.wh,8,'start')}
   </g>`;
 }
 function symEX(x,y){
@@ -452,12 +484,12 @@ function symFJ(x,y){
     <path d="M${x-10},${y} Q${x-5},${y+7} ${x},${y} Q${x+5},${y-7} ${x+10},${y}" fill="none" stroke="${SC.fj}" stroke-width="1.5"/>
   </g>`;
 }
-function symGlobe(x,y,lbl='GV'){
+function symGlobe(x,y,lbl='GL'){
   return `<g>
     <circle cx="${x}" cy="${y}" r="10" fill="${SC.globe}" fill-opacity=".2" stroke="${SC.globe}" stroke-width="1.5"/>
     <line x1="${x-10}" y1="${y}" x2="${x+10}" y2="${y}" stroke="${SC.globe}" stroke-width="1.5"/>
     <line x1="${x}" y1="${y-10}" x2="${x}" y2="${y+10}" stroke="${SC.globe}" stroke-width="1.5"/>
-    ${svgText(x,y+20,lbl,SC.globe,8)}
+    ${svgText(x+14,y+4,lbl,SC.globe,8,'start')}
   </g>`;
 }
 function symTank(x,y,w,h,lbl){
@@ -469,6 +501,8 @@ function symTank(x,y,w,h,lbl){
 
 function renderDiagram(){
   const P=S.pump, B=S.building, G=S.groups;
+  const inletPipe=P.inletPipe||'50A';
+  const pumpPipe=P.pumpPipe||'65A';
   const isBst=S.system==='booster';
   const nPump=P.count;
   const pumpLabels=nPump===1?['주펌프']:nPump===2?['주펌프','예비펌프']:['주펌프①','주펌프②','예비펌프'];
@@ -504,8 +538,7 @@ function renderDiagram(){
 
   // Group section y
   const GROUP_HDR_Y=MAIN_END_Y+50;
-  // Per group height: base 60 + prv? 120 : 0 + zones*30 + 80
-  const groupH=(g)=>(g&&g.prv?120:0)+80+(g?g.zones.length*30:0)+80;
+  const groupH=(g)=>(g&&g.prv?174:0)+165;
   const maxGH=G.length?Math.max(...G.map(groupH)):200;
   const svgH=GROUP_HDR_Y+maxGH+60;
 
@@ -516,10 +549,13 @@ function renderDiagram(){
   // ── Inlet section ──
   s+=svgText(CX,INLET_Y-8,'수도 인입관','#8b949e',10);
   s+=svgLine(CX,INLET_Y,CX,GV1_Y-10);
+  s+=svgText(CX-7,INLET_Y+22,inletPipe,'#8b949e',8,'end');
   s+=symGV(CX,GV1_Y);
   s+=svgLine(CX,GV1_Y+10,CX,CV1_Y-10);
+  s+=svgText(CX-7,(GV1_Y+CV1_Y)/2+4,inletPipe,'#8b949e',8,'end');
   s+=symCV(CX,CV1_Y);
   s+=svgLine(CX,CV1_Y+10,CX,TANK_Y);
+  s+=svgText(CX-7,(CV1_Y+TANK_Y)/2+4,inletPipe,'#8b949e',8,'end');
 
   const tankLbl=isBst?'저수조':'고가수조';
   s+=symTank(CX,TANK_Y,120,TANK_H,tankLbl);
@@ -527,8 +563,10 @@ function renderDiagram(){
   s+=`<circle cx="${CX+35}" cy="${TANK_Y+18}" r="7" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>`;
   s+=svgText(CX+35,TANK_Y+34,'볼탭',SC.gv,7);
   s+=svgLine(CX,TANK_BOT,CX,GV2_Y-10);
+  s+=svgText(CX-7,(TANK_BOT+GV2_Y)/2+4,pumpPipe,'#8b949e',8,'end');
   s+=symGV(CX,GV2_Y);
   s+=svgLine(CX,GV2_Y+10,CX,PUMP_SUCK_Y);
+  s+=svgText(CX-7,(GV2_Y+PUMP_SUCK_Y)/2+4,pumpPipe,'#8b949e',8,'end');
 
   if(isBst){
     // ── Pump section ──
@@ -543,11 +581,13 @@ function renderDiagram(){
     for(let i=0;i<nPump;i++){
       const px=pumpXs[i];
       s+=svgLine(px,PUMP_SUCK_Y,px,PUMP_DISC_Y);
+      s+=svgText(px-7,PUMP_SUCK_Y+16,pumpPipe,'#8b949e',8,'end');
       s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv1,8,'GV');
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj1);
       s+=symST(px,PUMP_SUCK_Y+COMP_OFFSETS.st);
       s+=symPump(px,PUMP_SUCK_Y+COMP_OFFSETS.pump,18,pumpLabels[i]);
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj2);
+      s+=svgText(px-7,PUMP_SUCK_Y+COMP_OFFSETS.fj2+18,pumpPipe,'#8b949e',8,'end');
       s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv2,8,'GV');
       s+=symCV(px,PUMP_SUCK_Y+COMP_OFFSETS.cv,8,'CV');
     }
@@ -557,6 +597,7 @@ function renderDiagram(){
     const midPX=pumpXs[Math.floor((nPump-1)/2)];
     s+=svgLine(midPX,PUMP_DISC_Y,CX,PUMP_DISC_Y);
     s+=svgLine(CX,PUMP_DISC_Y,CX,HEADER_Y);
+    s+=svgText(CX-7,(PUMP_DISC_Y+HEADER_Y)/2+4,P.mainPipe,'#8b949e',8,'end');
 
     // PG & WH on discharge header
     s+=svgLine(CX,HEADER_Y-25,CX+60,HEADER_Y-25);
@@ -564,23 +605,34 @@ function renderDiagram(){
     s+=svgLine(CX,HEADER_Y-5,CX-60,HEADER_Y-5);
     s+=symWH(CX-60,HEADER_Y-5);
 
-    // Bypass (emergency)
-    const bpX=pumpXs[nPump-1]+70;
-    s+=svgLine(CX,PUMP_SUCK_Y+10,bpX,PUMP_SUCK_Y+10);
-    s+=svgLine(bpX,PUMP_SUCK_Y+10,bpX,PUMP_DISC_Y-10);
-    s+=svgLine(bpX,PUMP_DISC_Y-10,CX,PUMP_DISC_Y-10);
-    s+=symGV(bpX,PUMP_SUCK_Y+40,8,'GV');
-    s+=svgText(bpX+15,PUMP_SUCK_Y+40,'비상',SC.gv,8,'start');
-    s+=symGV(bpX,PUMP_DISC_Y-40,8,'GV');
-    s+=svgText(bpX+15,PUMP_DISC_Y-40,'바이패스','#8b949e',8,'start');
+    // Emergency bypass — from after tank GV2, wraps entire pump bank, connects to discharge main
+    {
+      const bpX=pumpXs[nPump-1]+70;
+      const bpD='stroke-dasharray="6,3" stroke-opacity=".7"';
+      const bpTop=GV2_Y+20, bpBot=PUMP_DISC_Y+20;
+      const bpMid=(bpTop+bpBot)/2;
+      // Three sides of the bypass U-shape
+      s+=`<line x1="${CX}" y1="${bpTop}" x2="${bpX}" y2="${bpTop}" stroke="#d29922" stroke-width="1.5" ${bpD}/>`;
+      s+=`<line x1="${bpX}" y1="${bpTop}" x2="${bpX}" y2="${bpBot}" stroke="#d29922" stroke-width="1.5" ${bpD}/>`;
+      s+=`<line x1="${bpX}" y1="${bpBot}" x2="${CX}" y2="${bpBot}" stroke="#d29922" stroke-width="1.5" ${bpD}/>`;
+      // Two GVs — one near top, one near bottom
+      s+=symGV(bpX,bpTop+35,8,'GV');
+      s+=symGV(bpX,bpBot-35,8,'GV');
+      // Label box centered on the vertical
+      s+=`<rect x="${bpX+6}" y="${bpMid-17}" width="56" height="34" rx="3" fill="#1c1608" stroke="#d29922" stroke-width="1" opacity=".9"/>`;
+      s+=svgText(bpX+34,bpMid-4,'비상바이패스','#d29922',8);
+      s+=svgText(bpX+34,bpMid+9,'평상시 닫힘','#d29922',7);
+    }
 
   } else {
     // Gravity: simple drop
     s+=svgLine(CX,GV2_Y+10,CX,HEADER_Y);
+    s+=svgText(CX-7,(GV2_Y+HEADER_Y)/2+4,P.mainPipe,'#8b949e',8,'end');
   }
 
   // ── Main pipe section ──
   s+=svgLine(CX,HEADER_Y,CX,MAIN_END_Y,SC.pipe,2.5);
+  s+=svgText(CX-7,HEADER_Y+22,P.mainPipe,'#58a6ff',8,'end');
 
   // AV at top
   s+=svgLine(CX,MAIN_Y,CX+60,MAIN_Y);
@@ -600,9 +652,11 @@ function renderDiagram(){
 
   // ── Group distribution header ──
   s+=svgLine(CX,MAIN_END_Y,CX,GROUP_HDR_Y);
+  s+=svgText(CX-7,(MAIN_END_Y+GROUP_HDR_Y)/2+4,P.mainPipe,'#8b949e',8,'end');
   if(G.length){
     const minGX=Math.min(...groupXs), maxGX=Math.max(...groupXs);
     s+=svgLine(minGX,GROUP_HDR_Y,maxGX,GROUP_HDR_Y);
+    s+=svgText(CX,GROUP_HDR_Y-7,P.mainPipe,'#8b949e',8);
   }
 
   // ── Groups ──
@@ -610,63 +664,59 @@ function renderDiagram(){
     const g=G[i], gx=groupXs[i];
     let gy=GROUP_HDR_Y;
 
-    // Drop from distribution header
-    s+=svgLine(gx,GROUP_HDR_Y,gx,gy+20);
-    gy+=20;
+    // Drop from distribution header → BV (입상관 초입)
+    s+=svgLine(gx,gy,gx,gy+15);
+    s+=svgText(gx-7,gy+8,g.pipe,'#8b949e',8,'end');
+    gy+=15;
+    s+=symBV(gx,gy+10,9,'BV');
+    gy+=25;
+    s+=svgLine(gx,gy,gx,gy+10);
+    gy+=10;
 
     if(g.prv){
-      // GV - PRV - GV (main line)
-      s+=symGV(gx,gy+15,8,'GV');
-      s+=svgLine(gx,gy+23,gx,gy+40);
-      s+=symPRV(gx,gy+55);
-      s+=svgLine(gx,gy+67,gx,gy+80);
-      s+=symGV(gx,gy+90,8,'GV');
-      // Bypass lines
-      const bx=gx-45;
-      s+=svgLine(gx,gy+15,bx,gy+15);
-      s+=svgLine(bx,gy+15,bx,gy+90);
-      s+=svgLine(bx,gy+90,gx,gy+90);
-      s+=symGV(bx,gy+30,7,'GV');
-      s+=symGlobe(bx,gy+52,'GL');
-      s+=symGV(bx,gy+75,7,'GV');
-      s+=svgText(bx-5,gy+52,'바이패스','#8b949e',8,'end');
-      gy+=100;
+      // GV → ST → PG(1차) → PRV → PG(2차) → GV
+      const bpCol='#d29922'; const bpDash='stroke-dasharray="6,3" stroke-opacity=".7"';
+      s+=symGV(gx,gy+8,8,'GV');
+      s+=svgLine(gx,gy+16,gx,gy+33);
+      s+=symST(gx,gy+41);
+      s+=svgLine(gx,gy+53,gx,gy+65);
+      s+=svgLine(gx,gy+71,gx+32,gy+71); s+=symPG(gx+32,gy+71,'PG1');
+      s+=svgLine(gx,gy+77,gx,gy+89);
+      s+=symPRV(gx,gy+101);
+      s+=svgLine(gx,gy+113,gx,gy+125);
+      s+=svgLine(gx,gy+131,gx+32,gy+131); s+=symPG(gx+32,gy+131,'PG2');
+      s+=svgLine(gx,gy+137,gx,gy+148);
+      s+=symGV(gx,gy+156,8,'GV');
+      s+=svgLine(gx,gy+164,gx,gy+174);
+      const bx=gx-62;
+      s+=`<line x1="${gx}" y1="${gy+8}" x2="${bx}" y2="${gy+8}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
+      s+=`<line x1="${bx}" y1="${gy+8}" x2="${bx}" y2="${gy+156}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
+      s+=`<line x1="${bx}" y1="${gy+156}" x2="${gx}" y2="${gy+156}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
+      s+=`<rect x="${bx-36}" y="${gy+73}" width="34" height="16" rx="3" fill="#1c1608" stroke="${bpCol}" stroke-width="1" opacity=".8"/>`;
+      s+=svgText(bx-19,gy+85,'바이패스',bpCol,8);
+      s+=symGV(bx,gy+28,7,'GV');
+      s+=symGlobe(bx,gy+82,'GL');
+      s+=symGV(bx,gy+136,7,'GV');
+      gy+=174;
     }
 
-    // BV (branch isolation)
-    s+=svgLine(gx,gy,gx,gy+15);
-    s+=symBV(gx,gy+20,9,'BV');
-    gy+=35;
+    // AV (최상부) and DV (최하부) — branches right
+    s+=svgLine(gx,gy,gx+50,gy);
+    s+=symAV(gx+50,gy);
+    s+=svgLine(gx,gy+15,gx+50,gy+15);
+    s+=symDV(gx+50,gy+15);
+    s+=svgLine(gx,gy,gx,gy+28);
+    gy+=28;
 
-    // AV and DV
-    s+=svgLine(gx,gy,gx+45,gy);
-    s+=symAV(gx+45,gy-10);
-    s+=svgLine(gx,gy+10,gx+45,gy+10);
-    s+=symDV(gx+45,gy+15);
-
-    // Group box
-    s+=svgLine(gx,gy,gx,gy+10);
-    const boxY=gy+10, boxH=g.prv?70:55;
-    s+=`<rect x="${gx-60}" y="${boxY}" width="120" height="${boxH}" fill="#161b22" stroke="${g.prv?SC.prv:'#30363d'}" stroke-width="${g.prv?2:1}" rx="5"/>`;
-    s+=svgText(gx,boxY+18,g.name,'#e6edf3',11,'middle','700');
-    s+=svgText(gx,boxY+33,`${g.pipe} | ${g.flow}L/min`,'#8b949e',9);
-    if(g.prv) s+=svgText(gx,boxY+52,`PRV ${B.prvPressure}kgf/cm²`,SC.prv,9);
-    gy+=boxH+14;
-
-    // Zones
-    for(let zi=0;zi<g.zones.length;zi++){
-      const z=g.zones[zi];
-      const zx=gx-50+zi*50;
-      if(zi===0) s+=svgLine(gx,gy,gx,gy+15);
-      s+=svgLine(gx,gy+15,zx,gy+15);
-      s+=svgLine(zx,gy+15,zx,gy+30);
-      s+=symBV(zx,gy+40,8,'BV');
-      const zBoxY=gy+55;
-      s+=`<rect x="${zx-40}" y="${zBoxY}" width="80" height="36" fill="#21262d" stroke="#30363d" rx="4"/>`;
-      s+=svgText(zx,zBoxY+14,z.name,'#e6edf3',10);
-      s+=svgText(zx,zBoxY+27,z.pipe,'#8b949e',9);
-    }
-    if(!G.length) s+=svgText(CX,GROUP_HDR_Y+50,'그룹 없음 — 계통 설정 탭에서 그룹을 추가하세요','#8b949e',11);
+    // Group box — text summary (no zone breakdown in diagram)
+    const floorBVs=(g.floorPipes||[]).reduce((sm,fp)=>sm+(+fp.qty||0),0);
+    const zoneBVs=g.zones.length;
+    const boxH=72;
+    s+=`<rect x="${gx-65}" y="${gy}" width="130" height="${boxH}" fill="#161b22" stroke="${g.prv?SC.prv:'#30363d'}" stroke-width="${g.prv?2:1.5}" rx="5"/>`;
+    s+=svgText(gx,gy+16,g.name,'#e6edf3',11,'middle','700');
+    s+=svgText(gx,gy+30,g.pipe+(g.prv?` | PRV ${B.prvPressure}kgf`:''),'#8b949e',9);
+    s+=svgText(gx,gy+46,`층별주관 BV × ${floorBVs}개`,SC.bv,9);
+    s+=svgText(gx,gy+60,`화장실 BV × ${zoneBVs}개`,SC.bv,9);
   }
   if(!G.length) s+=svgText(CX,GROUP_HDR_Y+60,'그룹 없음 — 계통 설정에서 그룹을 추가하세요','#8b949e',11);
 
@@ -679,20 +729,20 @@ function renderDiagram(){
 
 function renderLegend(x,y){
   const items=[
-    {sym:'gv',lbl:'게이트밸브'},
-    {sym:'bv',lbl:'볼밸브'},
-    {sym:'cv',lbl:'체크밸브'},
-    {sym:'prv',lbl:'감압밸브'},
-    {sym:'globe',lbl:'글로브밸브'},
-    {sym:'st',lbl:'스트레이너'},
-    {sym:'av',lbl:'공기빼기'},
-    {sym:'dv',lbl:'배수밸브'},
-    {sym:'pg',lbl:'압력계'},
-    {sym:'wh',lbl:'수격방지기'},
-    {sym:'ex',lbl:'신축이음'},
-    {sym:'fj',lbl:'플렉시블'},
+    {sym:'gv',lbl:'게이트밸브(GV)'},
+    {sym:'bv',lbl:'볼밸브(BV)'},
+    {sym:'cv',lbl:'체크밸브(CV)'},
+    {sym:'prv',lbl:'감압밸브(PRV)'},
+    {sym:'globe',lbl:'글로브밸브(Globe)'},
+    {sym:'st',lbl:'스트레이너(ST)'},
+    {sym:'av',lbl:'공기빼기(AV)'},
+    {sym:'dv',lbl:'배수밸브(DV)'},
+    {sym:'pg',lbl:'압력계(PG)'},
+    {sym:'wh',lbl:'수격방지기(WH)'},
+    {sym:'ex',lbl:'신축이음(EX)'},
+    {sym:'fj',lbl:'플렉시블(FJ)'},
   ];
-  const lh=22, lw=140, lpad=10;
+  const lh=22, lw=160, lpad=10;
   let s=`<rect x="${x-10}" y="${y-10}" width="${lw+20}" height="${items.length*lh+26}" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1" opacity=".95"/>`;
   s+=`<text x="${x+lw/2}" y="${y+6}" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="700">범 례</text>`;
   items.forEach((it,i)=>{
@@ -818,13 +868,12 @@ function toggleGuide(el){
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 function setSystem(v){S.system=v;renderAll();}
-function setPump(k,v){S.pump[k]=v;recalcPRV();renderAll();}
-function setBuilding(k,v){S.building[k]=v;recalcPRV();renderAll();}
-function recalcPRV(){for(const g of S.groups)g.prv=needsPRV(g.floor||1);}
+function setPump(k,v){S.pump[k]=v;renderAll();}
+function setBuilding(k,v){S.building[k]=v;renderAll();}
 
 function addGroup(){
-  S.groups.push({id:uid(),name:`그룹 ${S.groups.length+1}`,flow:100,pipe:'65A',floor:1,prv:false,zones:[]});
-  recalcPRV(); renderAll();
+  S.groups.push({id:uid(),name:`그룹 ${S.groups.length+1}`,pipe:'65A',prv:false,floorPipes:[],zones:[]});
+  renderAll();
 }
 function delGroup(id){
   if(!confirm('그룹을 삭제하시겠습니까?')) return;
@@ -847,6 +896,19 @@ function delZone(gid,idx){
 function setZoneProp(gid,idx,k,v){
   const g=S.groups.find(g=>g.id===gid);if(!g)return;
   g.zones[idx][k]=v;
+}
+function addFloorPipe(gid){
+  const g=S.groups.find(g=>g.id===gid);if(!g)return;
+  if(!g.floorPipes)g.floorPipes=[];
+  g.floorPipes.push({id:uid(),floorNo:g.floorPipes.length+1,pipe:'65A',qty:1});renderAll();
+}
+function delFloorPipe(gid,idx){
+  const g=S.groups.find(g=>g.id===gid);if(!g)return;
+  g.floorPipes.splice(idx,1);renderAll();
+}
+function setFloorPipeProp(gid,idx,k,v){
+  const g=S.groups.find(g=>g.id===gid);if(!g)return;
+  g.floorPipes[idx][k]=v;renderAll();
 }
 function resetAll(){
   if(!confirm('모든 설정을 초기화하시겠습니까?')) return;
@@ -891,11 +953,10 @@ function loadWaterApp(e){
       S.groups=cwGroups.map(cg=>{
         const zoneObjs=(cg.zoneIds||[]).map(zid=>{
           const z=zones.find(z=>z.id===zid);
-          return z?{name:z.name,pipe:z.tree?'40A':'40A'}:{name:zid,pipe:'40A'};
+          return z?{name:z.name,pipe:'40A'}:{name:zid,pipe:'40A'};
         });
-        return {id:uid(),name:cg.name||'그룹',flow:100,pipe:'65A',floor:1,prv:false,zones:zoneObjs};
+        return {id:uid(),name:cg.name||'그룹',pipe:'65A',prv:false,floorPipes:[],zones:zoneObjs};
       });
-      recalcPRV();
       renderAll();
       alert(`급수앱 데이터 연동 완료.\n그룹 ${S.groups.length}개, Zone ${S.groups.reduce((s,g)=>s+g.zones.length,0)}개 불러왔습니다.\n유량·관경은 직접 확인 후 수정하세요.`);
     }catch{alert('급수앱 JSON 형식이 올바르지 않습니다.');}
