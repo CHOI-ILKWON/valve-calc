@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>밸브 계통도 계산서</title>
+<style>
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--surface3:#2d333b;
+  --border:#30363d;--accent:#58a6ff;--accent2:#3fb950;--warn:#d29922;
+  --hot:#f78166;--red:#f85149;--purple:#bc8cff;--text:#e6edf3;--text2:#8b949e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 'Malgun Gothic','Apple SD Gothic Neo',sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:12px;height:52px}
+.logo{color:var(--accent);font-weight:700;font-size:15px;white-space:nowrap}
+#projectName{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;font-size:13px;width:180px;font-family:inherit}
+#projectName:focus{outline:none;border-color:var(--accent)}
+.hbtns{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.tabs-bar{display:flex;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;padding:0 16px}
+.tab-btn{padding:12px 20px;cursor:pointer;color:var(--text2);border:none;border-bottom:2px solid transparent;font-size:13px;white-space:nowrap;transition:all .15s;background:none;font-family:inherit}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover:not(.active){color:var(--text)}
+.tab-pane{display:none;min-height:calc(100vh - 104px)}
+.tab-pane.active{display:block}
+.btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-family:inherit;transition:opacity .15s;white-space:nowrap}
+.btn:hover{opacity:.82}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-danger{background:var(--red);color:#fff}
+.btn-success{background:var(--accent2);color:#0d1117}
+.btn-warn{background:var(--warn);color:#0d1117}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-sm{padding:3px 8px;font-size:11px}
+.badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px}
+.section-title{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;font-weight:700}
+.form-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.form-label{font-size:12px;color:var(--text2);width:130px;flex-shrink:0}
+.form-inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 9px;border-radius:5px;font-size:13px;font-family:inherit;width:120px}
+.form-inp:focus{outline:none;border-color:var(--accent)}
+.form-inp.sm{width:80px}
+select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:5px;font-family:inherit;font-size:12px}
+select:focus{outline:none;border-color:var(--accent)}
+.system-cards{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.sys-card{flex:1;min-width:200px;background:var(--surface2);border:2px solid var(--border);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .15s}
+.sys-card.active{border-color:var(--accent);background:rgba(88,166,255,.08)}
+.sys-card-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.sys-card-desc{font-size:11px;color:var(--text2)}
+.group-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px}
+.group-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.group-name-inp{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-size:13px;font-family:inherit;font-weight:600;width:130px}
+.group-name-inp:focus{outline:none;border-color:var(--accent)}
+.pressure-badge{font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600}
+.zone-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.zone-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.zone-inp{background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:3px 7px;border-radius:4px;font-size:12px;font-family:inherit;width:110px}
+.zone-inp:focus{outline:none;border-color:var(--accent)}
+.prv-check{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;user-select:none}
+.prv-check input{accent-color:var(--warn)}
+.warn-chip{background:rgba(210,153,34,.15);border:1px solid rgba(210,153,34,.4);color:var(--warn);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
+.ok-chip{background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.4);color:var(--accent2);font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600}
+.floor-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.floor-table th{background:var(--surface3);padding:6px 10px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)}
+.floor-table td{padding:6px 10px;border-bottom:1px solid var(--border)}
+.floor-table tr:last-child td{border-bottom:none}
+.floor-warn td{background:rgba(210,153,34,.08)}
+.valve-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:16px}
+.vscard{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.vscard-name{font-size:11px;color:var(--text2);margin-bottom:6px}
+.vscard-count{font-size:26px;font-weight:700}
+.vscard-unit{font-size:11px;color:var(--text2)}
+table.vlist{width:100%;border-collapse:collapse;font-size:12px}
+table.vlist th{background:var(--surface3);padding:8px 10px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)}
+table.vlist td{padding:7px 10px;border-bottom:1px solid var(--border)}
+table.vlist tr:last-child td{border-bottom:none}
+table.vlist tr:hover td{background:rgba(255,255,255,.02)}
+.guide-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.guide-hdr{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;user-select:none}
+.guide-hdr:hover{background:var(--surface2)}
+.guide-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.guide-title{font-weight:700;font-size:13px}
+.guide-badge{font-size:10px;padding:2px 7px;border-radius:3px}
+.guide-body{padding:0 16px 14px;display:none}
+.guide-body.open{display:block}
+.guide-body p{font-size:12px;color:var(--text2);margin-bottom:8px;line-height:1.6}
+.guide-tip{background:rgba(88,166,255,.08);border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:var(--text);margin-top:10px}
+.guide-tip strong{color:var(--accent)}
+.warn-banner{background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.4);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--warn)}
+.svg-scroll{overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;display:flex;align-items:center;justify-content:center}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;width:320px}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.modal-inp{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:14px;font-family:inherit;margin-bottom:12px}
+.modal-inp:focus{outline:none;border-color:var(--accent)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+.page{padding:16px;max-width:1100px}
+.fr{display:flex;align-items:center;gap:8px}
+.mb{margin-bottom:8px}
+.ml{margin-left:auto}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media print{
+  header,.tabs-bar{display:none!important}
+  .tab-pane{display:block!important;min-height:auto!important;page-break-after:always}
+  body{background:#fff;color:#000}
+}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🔧 밸브 계통도 계산서</span>
+  <input id="projectName" type="text" placeholder="프로젝트명">
+  <div class="hbtns">
+    <button class="btn btn-ghost" onclick="window.print()">🖨 PDF</button>
+    <button class="btn btn-success" onclick="saveJSON()">💾 저장</button>
+    <label class="btn btn-ghost" style="cursor:pointer">📂 불러오기<input type="file" accept=".json" style="display:none" onchange="loadJSON(event)"></label>
+    <label class="btn btn-warn" style="cursor:pointer">🔗 급수앱 연동<input type="file" accept=".json" style="display:none" onchange="loadWaterApp(event)"></label>
+    <button class="btn btn-danger" onclick="resetAll()">🔄 초기화</button>
+  </div>
+</header>
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab(0)">① 계통 설정</button>
+  <button class="tab-btn" onclick="switchTab(1)">② 계통도</button>
+  <button class="tab-btn" onclick="switchTab(2)">③ 밸브 목록</button>
+  <button class="tab-btn" onclick="switchTab(3)">④ 밸브 가이드</button>
+</div>
+<div class="tab-pane active" id="tab0"><div class="page" id="settingsPanel"></div></div>
+<div class="tab-pane" id="tab1"><div class="page" id="diagramPanel"></div></div>
+<div class="tab-pane" id="tab2"><div class="page" id="valvePanel"></div></div>
+<div class="tab-pane" id="tab3"><div class="page" id="guidePanel"></div></div>
+<div id="modalOverlay" class="modal-overlay" style="display:none"></div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const PIPES=['15A','20A','25A','32A','40A','50A','65A','80A','100A','125A','150A'];
+let _id=1; const uid=()=>'g'+(++_id);
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ── State ────────────────────────────────────────────────────────────────────
+const S={
+  projectName:'새 프로젝트',
+  system:'booster',
+  pump:{count:2,pressure:7,flow:300,mainPipe:'100A'},
+  building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5},
+  groups:[]
+};
+let activeTab=0;
+
+// ── Calc ─────────────────────────────────────────────────────────────────────
+function floorPressure(floor){
+  return S.pump.pressure - floor * S.building.floorHeight * 0.1;
+}
+function needsPRV(floor){
+  return floorPressure(floor) > S.building.targetPressure;
+}
+
+function calcValves(){
+  const P=S.pump, B=S.building, G=S.groups;
+  const isBst=S.system==='booster';
+  const list=[];
+  let no=1;
+  function add(pos,name,spec,pipe,qty,note=''){list.push({no:no++,pos,name,spec,pipe,qty,note});}
+
+  if(isBst){
+    add('수도 인입부','게이트밸브','게이트밸브(인입차단)',P.mainPipe,1,'수도계량기 직후');
+    add('수도 인입부','체크밸브','체크밸브(역류방지)',P.mainPipe,1,'저수조 입구 전');
+    add('저수조 내부','볼탭','볼탭(전동밸브)','25A',1,'수위 조절');
+    add('저수조 출구','게이트밸브','게이트밸브(출구공통)',P.mainPipe,1,'저수조 출구');
+    add('펌프 흡입측','게이트밸브','게이트밸브',P.mainPipe,P.count,`×${P.count}대`);
+    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',P.mainPipe,P.count,`×${P.count}대`);
+    add('펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입)',P.mainPipe,P.count,`×${P.count}대`);
+    add('펌프 토출측','게이트밸브','게이트밸브',P.mainPipe,P.count,`×${P.count}대`);
+    add('펌프 토출측','체크밸브','체크밸브',P.mainPipe,P.count,`×${P.count}대`);
+    add('펌프 토출측','플렉시블조인트','플렉시블조인트(토출)',P.mainPipe,P.count,`×${P.count}대`);
+    add('토출 헤더','압력계','압력계',P.mainPipe,1,'');
+    add('토출 헤더','수격방지기','수격방지기',P.mainPipe,1,'');
+    add('비상 바이패스','게이트밸브','게이트밸브(비상급수용)',P.mainPipe,2,'평상시 닫힘');
+  } else {
+    add('고가수조 인입','게이트밸브','게이트밸브(인입차단)',P.mainPipe,1,'');
+    add('고가수조 인입','체크밸브','체크밸브(역류방지)',P.mainPipe,1,'');
+    add('고가수조 내부','볼탭','볼탭','25A',1,'수위 조절');
+    add('고가수조 출구','게이트밸브','게이트밸브(출구공통)',P.mainPipe,1,'');
+  }
+
+  add('메인 수직관','유량계','유량계',P.mainPipe,1,'');
+  add('메인 수직관 최상부','공기빼기밸브','자동공기빼기밸브','15A',1,'');
+  add('메인 수직관 최하부','배수밸브','배수밸브','25A',1,'');
+  const exCnt=Math.ceil(B.floors/3);
+  add('메인 수직관','신축이음','벨로우즈형 신축이음',P.mainPipe,exCnt,`${B.floors}층÷3=${exCnt}개`);
+
+  for(const g of G){
+    add(`${g.name} 분기`,'볼밸브','볼밸브(분기차단)',g.pipe,1,'분기 차단');
+    if(g.prv){
+      add(`${g.name} PRV 전후`,'게이트밸브','게이트밸브(PRV 전후)',g.pipe,2,'PRV 전·후');
+      add(`${g.name} PRV`,'감압밸브',`감압밸브(PRV)`,g.pipe,1,`설정압 ${B.prvPressure}kgf/cm²`);
+      add(`${g.name} 바이패스`,'게이트밸브','게이트밸브(바이패스)',g.pipe,2,'바이패스 전·후');
+      add(`${g.name} 바이패스`,'글로브밸브','글로브밸브(유량조절)',g.pipe,1,'바이패스 조절');
+    }
+    add(`${g.name} 최고점`,'공기빼기밸브','자동공기빼기밸브','15A',1,'');
+    add(`${g.name} 최저점`,'배수밸브','배수밸브','25A',1,'');
+    for(const z of g.zones){
+      add(`${g.name} > ${z.name}`,'볼밸브','볼밸브(Zone 차단)',z.pipe,1,'Zone 차단');
+    }
+  }
+
+  // Summary
+  const names=['게이트밸브','볼밸브','체크밸브','감압밸브','글로브밸브','Y형 스트레이너',
+    '공기빼기밸브','배수밸브','압력계','수격방지기','신축이음','플렉시블조인트','유량계','볼탭'];
+  const summary={};
+  for(const n of names) summary[n]=0;
+  for(const item of list) summary[item.name]=(summary[item.name]||0)+item.qty;
+  return {list,summary};
+}
+
+// ── Tab switch ────────────────────────────────────────────────────────────────
+function switchTab(i){
+  activeTab=i;
+  document.querySelectorAll('.tab-btn').forEach((b,j)=>b.classList.toggle('active',i===j));
+  document.querySelectorAll('.tab-pane').forEach((p,j)=>p.classList.toggle('active',i===j));
+  renderTab(i);
+}
+function renderTab(i){
+  if(i===0) renderSettings();
+  if(i===1) renderDiagram();
+  if(i===2) renderValveList();
+  if(i===3) renderGuide();
+}
+function renderAll(){renderTab(activeTab);}
+
+// ── Tab 1: Settings ───────────────────────────────────────────────────────────
+function renderSettings(){
+  const P=S.pump, B=S.building;
+  let h='';
+
+  // System type
+  h+=`<div class="section">
+    <div class="section-title">급수 방식</div>
+    <div class="system-cards">
+      <div class="sys-card${S.system==='booster'?' active':''}" onclick="setSystem('booster')">
+        <div class="sys-card-title">🔄 부스터펌프식</div>
+        <div class="sys-card-desc">저수조 + 부스터펌프 가압</div>
+      </div>
+      <div class="sys-card${S.system==='gravity'?' active':''}" onclick="setSystem('gravity')">
+        <div class="sys-card-title">🏛 고가수조식</div>
+        <div class="sys-card-desc">옥상 고가탱크 + 중력 급수</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Pump specs
+  h+=`<div class="section">
+    <div class="section-title">${S.system==='booster'?'펌프 사양':'고가수조 사양'}</div>
+    <div class="form-row">
+      <span class="form-label">주펌프 대수</span>
+      <select onchange="setPump('count',+this.value)">
+        <option value="1"${P.count===1?' selected':''}>1대 (단독)</option>
+        <option value="2"${P.count===2?' selected':''}>2대 (주+예비)</option>
+        <option value="3"${P.count===3?' selected':''}>3대 (주2+예비1)</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <span class="form-label">토출압력 (kgf/cm²)</span>
+      <input class="form-inp sm" type="number" step="0.5" value="${P.pressure}" onchange="setPump('pressure',+this.value)">
+    </div>
+    <div class="form-row">
+      <span class="form-label">토출유량 (L/min)</span>
+      <input class="form-inp sm" type="number" value="${P.flow}" onchange="setPump('flow',+this.value)">
+    </div>
+    <div class="form-row">
+      <span class="form-label">메인관 관경</span>
+      <select onchange="setPump('mainPipe',this.value)">
+        ${PIPES.map(p=>`<option${p===P.mainPipe?' selected':''}>${p}</option>`).join('')}
+      </select>
+    </div>
+  </div>`;
+
+  // Building
+  h+=`<div class="section">
+    <div class="section-title">건물 정보</div>
+    <div class="form-row">
+      <span class="form-label">총 층수</span>
+      <input class="form-inp sm" type="number" value="${B.floors}" onchange="setBuilding('floors',+this.value)">
+    </div>
+    <div class="form-row">
+      <span class="form-label">층고 (m)</span>
+      <input class="form-inp sm" type="number" step="0.1" value="${B.floorHeight}" onchange="setBuilding('floorHeight',+this.value)">
+    </div>
+    <div class="form-row">
+      <span class="form-label">적정 급수압 (kgf/cm²)</span>
+      <input class="form-inp sm" type="number" step="0.1" value="${B.targetPressure}" onchange="setBuilding('targetPressure',+this.value)">
+    </div>
+    <div class="form-row">
+      <span class="form-label">감압밸브 설정압 (kgf/cm²)</span>
+      <input class="form-inp sm" type="number" step="0.1" value="${B.prvPressure}" onchange="setBuilding('prvPressure',+this.value)">
+    </div>
+  </div>`;
+
+  // Floor pressure table
+  h+=`<div class="section">
+    <div class="section-title">층별 압력 계산</div>
+    <table class="floor-table"><thead><tr>
+      <th>층</th><th>압력 (kgf/cm²)</th><th>상태</th>
+    </tr></thead><tbody>`;
+  for(let f=1;f<=B.floors;f++){
+    const p=floorPressure(f), over=p>B.targetPressure;
+    h+=`<tr${over?' class="floor-warn"':''}>
+      <td>${f}층</td><td>${p.toFixed(2)}</td>
+      <td>${over?`<span class="warn-chip">감압필요 ▶ PRV</span>`:`<span class="ok-chip">적정</span>`}</td>
+    </tr>`;
+  }
+  h+=`</tbody></table></div>`;
+
+  // Groups
+  h+=`<div class="section">
+    <div class="fr mb">
+      <span class="section-title" style="margin:0">그룹 / Zone 설정</span>
+      <button class="btn btn-primary btn-sm ml" onclick="addGroup()">+ 그룹 추가</button>
+    </div>`;
+  if(!S.groups.length) h+=`<div style="color:var(--text2);font-size:13px;padding:12px 0">그룹을 추가하세요.</div>`;
+  for(const g of S.groups){
+    const fp=floorPressure(g.floor||1), over=fp>B.targetPressure;
+    h+=`<div class="group-card">
+      <div class="group-hdr">
+        <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="그룹명">
+        <div class="form-row" style="margin:0;gap:6px">
+          <select onchange="setGroupVal('${g.id}','pipe',this.value)">
+            ${PIPES.map(p=>`<option${p===g.pipe?' selected':''}>${p}</option>`).join('')}
+          </select>
+          <input class="form-inp sm" type="number" value="${g.flow}" placeholder="유량" onchange="setGroupVal('${g.id}','flow',+this.value)" style="width:70px"> L/min
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-size:11px;color:var(--text2)">설치층</span>
+            <input class="form-inp" type="number" min="1" value="${g.floor||1}" onchange="setGroupFloor('${g.id}',+this.value)" style="width:55px">층
+          </div>
+          ${over?`<span class="warn-chip">압력초과! ${fp.toFixed(2)}kgf</span>`:`<span class="ok-chip">${fp.toFixed(2)}kgf</span>`}
+        </div>
+        <label class="prv-check">
+          <input type="checkbox" ${g.prv?'checked':''} onchange="setGroupVal('${g.id}','prv',this.checked)">
+          <span style="color:var(--warn)">감압밸브(PRV)</span>
+        </label>
+        <button class="btn btn-danger btn-sm ml" onclick="delGroup('${g.id}')">삭제</button>
+      </div>
+      <div class="zone-list">
+        <div class="fr" style="gap:6px;margin-bottom:6px">
+          <span style="font-size:11px;color:var(--text2)">Zone</span>
+          <button class="btn btn-ghost btn-sm" onclick="addZone('${g.id}')">+ Zone 추가</button>
+        </div>
+        ${g.zones.map((z,zi)=>`<div class="zone-row">
+          <input class="zone-inp" value="${esc(z.name)}" placeholder="Zone명" onchange="setZoneProp('${g.id}',${zi},'name',this.value)">
+          <select onchange="setZoneProp('${g.id}',${zi},'pipe',this.value)">
+            ${PIPES.map(p=>`<option${p===z.pipe?' selected':''}>${p}</option>`).join('')}
+          </select>
+          <button class="btn btn-danger btn-sm" onclick="delZone('${g.id}',${zi})">✕</button>
+        </div>`).join('')}
+        ${!g.zones.length?`<span style="font-size:11px;color:var(--text2)">Zone 없음</span>`:''}
+      </div>
+    </div>`;
+  }
+  h+=`</div>`;
+  document.getElementById('settingsPanel').innerHTML=h;
+}
+
+// ── Tab 2: Diagram SVG ────────────────────────────────────────────────────────
+const SC={gv:'#3fb950',bv:'#bc8cff',cv:'#58a6ff',prv:'#d29922',st:'#3fb950',
+  av:'#f85149',dv:'#8b949e',pg:'#d29922',wh:'#bc8cff',ex:'#8b949e',
+  fj:'#58a6ff',globe:'#f78166',pipe:'#8b949e'};
+
+function svgLine(x1,y1,x2,y2,col,w=2){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col||SC.pipe}" stroke-width="${w}"/>`;}
+function svgText(x,y,t,col,sz=9,anc='middle',fw='normal'){return `<text x="${x}" y="${y}" text-anchor="${anc}" fill="${col||'#8b949e'}" font-size="${sz}" font-weight="${fw}">${esc(t)}</text>`;}
+
+function symGV(x,y,s=10,lbl='GV'){
+  return `<g>
+    <polygon points="${x-s},${y-s} ${x},${y} ${x-s},${y+s}" fill="${SC.gv}" opacity=".9"/>
+    <polygon points="${x+s},${y-s} ${x},${y} ${x+s},${y+s}" fill="${SC.gv}" opacity=".9"/>
+    ${svgText(x,y+s+11,lbl,SC.gv,8)}
+  </g>`;
+}
+function symBV(x,y,s=10,lbl='BV'){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="${s}" fill="${SC.bv}" fill-opacity=".2" stroke="${SC.bv}" stroke-width="1.5"/>
+    <line x1="${x-s}" y1="${y}" x2="${x+s}" y2="${y}" stroke="${SC.bv}" stroke-width="3"/>
+    ${svgText(x,y+s+11,lbl,SC.bv,8)}
+  </g>`;
+}
+function symCV(x,y,s=10,lbl='CV'){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="${s}" fill="none" stroke="${SC.cv}" stroke-width="1.5"/>
+    <polygon points="${x-4},${y-7} ${x+8},${y} ${x-4},${y+7}" fill="${SC.cv}"/>
+    ${svgText(x,y+s+11,lbl,SC.cv,8)}
+  </g>`;
+}
+function symPRV(x,y,s=12,lbl='PRV'){
+  return `<g>
+    <polygon points="${x},${y-s} ${x+s},${y} ${x},${y+s} ${x-s},${y}" fill="${SC.prv}" fill-opacity=".25" stroke="${SC.prv}" stroke-width="1.5"/>
+    ${svgText(x,y+4,'P',SC.prv,9)}
+    ${svgText(x,y+s+11,lbl,SC.prv,8)}
+  </g>`;
+}
+function symST(x,y,s=11){
+  return `<g>
+    <rect x="${x-s}" y="${y-6}" width="${s*2}" height="12" fill="${SC.st}" fill-opacity=".15" stroke="${SC.st}" stroke-width="1.5" rx="2"/>
+    <line x1="${x}" y1="${y+6}" x2="${x+7}" y2="${y+16}" stroke="${SC.st}" stroke-width="1.5"/>
+    ${svgText(x,y+4,'Y',SC.st,8)}
+    ${svgText(x,y+s+14,'ST',SC.st,8)}
+  </g>`;
+}
+function symPump(x,y,r=18,lbl='펌프'){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="${r}" fill="#161b22" stroke="${SC.cv}" stroke-width="2"/>
+    <path d="M${x-7},${y+4} Q${x},${y-8} ${x+7},${y+4}" fill="none" stroke="${SC.cv}" stroke-width="2"/>
+    <polygon points="${x+7},${y} ${x+7},${y+8} ${x+15},${y+4}" fill="${SC.cv}"/>
+    ${svgText(x,y+r+12,lbl,'#8b949e',8)}
+  </g>`;
+}
+function symAV(x,y,lbl='AV'){
+  return `<g>
+    <polygon points="${x},${y-12} ${x-7},${y+6} ${x+7},${y+6}" fill="${SC.av}" fill-opacity=".8"/>
+    <line x1="${x}" y1="${y+6}" x2="${x}" y2="${y+14}" stroke="${SC.av}" stroke-width="2"/>
+    ${svgText(x,y+23,lbl,SC.av,8)}
+  </g>`;
+}
+function symDV(x,y,lbl='DV'){
+  return `<g>
+    <polygon points="${x},${y+12} ${x-7},${y-6} ${x+7},${y-6}" fill="${SC.dv}" fill-opacity=".8"/>
+    <line x1="${x}" y1="${y-14}" x2="${x}" y2="${y-6}" stroke="${SC.dv}" stroke-width="2"/>
+    ${svgText(x,y+23,lbl,SC.dv,8)}
+  </g>`;
+}
+function symPG(x,y){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="10" fill="${SC.pg}" fill-opacity=".2" stroke="${SC.pg}" stroke-width="1.5"/>
+    <line x1="${x-4}" y1="${y+3}" x2="${x+5}" y2="${y-4}" stroke="${SC.pg}" stroke-width="1.5"/>
+    ${svgText(x,y+20,'PG',SC.pg,8)}
+  </g>`;
+}
+function symWH(x,y){
+  return `<g>
+    <rect x="${x-8}" y="${y-14}" width="16" height="20" rx="8" fill="${SC.wh}" fill-opacity=".2" stroke="${SC.wh}" stroke-width="1.5"/>
+    <rect x="${x-4}" y="${y+6}" width="8" height="5" fill="${SC.wh}" fill-opacity=".6"/>
+    ${svgText(x,y+25,'WH',SC.wh,8)}
+  </g>`;
+}
+function symEX(x,y){
+  return `<g>
+    <path d="M${x-14},${y} Q${x-7},${y-8} ${x},${y} Q${x+7},${y+8} ${x+14},${y}" fill="none" stroke="${SC.ex}" stroke-width="2"/>
+    ${svgText(x+20,y+4,'EX',SC.ex,8,'start')}
+  </g>`;
+}
+function symFJ(x,y){
+  return `<g>
+    <path d="M${x-10},${y} Q${x-5},${y-7} ${x},${y} Q${x+5},${y+7} ${x+10},${y}" fill="none" stroke="${SC.fj}" stroke-width="1.5"/>
+    <path d="M${x-10},${y} Q${x-5},${y+7} ${x},${y} Q${x+5},${y-7} ${x+10},${y}" fill="none" stroke="${SC.fj}" stroke-width="1.5"/>
+  </g>`;
+}
+function symGlobe(x,y,lbl='GV'){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="10" fill="${SC.globe}" fill-opacity=".2" stroke="${SC.globe}" stroke-width="1.5"/>
+    <line x1="${x-10}" y1="${y}" x2="${x+10}" y2="${y}" stroke="${SC.globe}" stroke-width="1.5"/>
+    <line x1="${x}" y1="${y-10}" x2="${x}" y2="${y+10}" stroke="${SC.globe}" stroke-width="1.5"/>
+    ${svgText(x,y+20,lbl,SC.globe,8)}
+  </g>`;
+}
+function symTank(x,y,w,h,lbl){
+  return `<g>
+    <rect x="${x-w/2}" y="${y}" width="${w}" height="${h}" fill="#161b22" stroke="#30363d" stroke-width="1.5" rx="4"/>
+    ${svgText(x,y+h/2+4,lbl,'#8b949e',11)}
+  </g>`;
+}
+
+function renderDiagram(){
+  const P=S.pump, B=S.building, G=S.groups;
+  const isBst=S.system==='booster';
+  const nPump=P.count;
+  const pumpLabels=nPump===1?['주펌프']:nPump===2?['주펌프','예비펌프']:['주펌프①','주펌프②','예비펌프'];
+
+  const CX=220; // main center x
+  const pumpSpacing=nPump===1?0:130;
+  const totalPW=(nPump-1)*pumpSpacing;
+  const leftPX=CX-totalPW/2;
+  const pumpXs=Array.from({length:nPump},(_,i)=>leftPX+i*pumpSpacing);
+
+  const nGroups=G.length||1;
+  const groupSpacing=Math.max(160,Math.min(200,650/nGroups));
+  const totalGW=(nGroups-1)*groupSpacing;
+  const svgW=Math.max(700, Math.max(CX*2+100, totalGW+300));
+  const groupXs=Array.from({length:nGroups},(_,i)=>{
+    const base=(svgW-(nGroups-1)*groupSpacing)/2;
+    return base+i*groupSpacing;
+  });
+
+  // Y layout
+  const INLET_Y=40, GV1_Y=90, CV1_Y=140, TANK_Y=180;
+  const TANK_H=80, TANK_BOT=TANK_Y+TANK_H;
+  const GV2_Y=TANK_BOT+35;
+  const PUMP_SUCK_Y=GV2_Y+55;
+  const COMP_OFFSETS={gv1:30,fj1:65,st:100,pump:150,fj2:200,gv2:235,cv:270};
+  const PUMP_DISC_Y=PUMP_SUCK_Y+COMP_OFFSETS.cv+30;
+  const HEADER_Y=PUMP_DISC_Y+45;
+
+  const exCnt=Math.ceil(B.floors/3);
+  const MAIN_Y=HEADER_Y+80;
+  const MAIN_H=(exCnt+1)*55;
+  const MAIN_END_Y=MAIN_Y+MAIN_H;
+
+  // Group section y
+  const GROUP_HDR_Y=MAIN_END_Y+50;
+  // Per group height: base 60 + prv? 120 : 0 + zones*30 + 80
+  const groupH=(g)=>(g&&g.prv?120:0)+80+(g?g.zones.length*30:0)+80;
+  const maxGH=G.length?Math.max(...G.map(groupH)):200;
+  const svgH=GROUP_HDR_Y+maxGH+60;
+
+  let s='';
+  s+=`<svg width="${svgW}" height="${svgH}" style="display:block;min-width:600px">`;
+  s+=`<rect width="${svgW}" height="${svgH}" fill="#0d1117"/>`;
+
+  // ── Inlet section ──
+  s+=svgText(CX,INLET_Y-8,'수도 인입관','#8b949e',10);
+  s+=svgLine(CX,INLET_Y,CX,GV1_Y-10);
+  s+=symGV(CX,GV1_Y);
+  s+=svgLine(CX,GV1_Y+10,CX,CV1_Y-10);
+  s+=symCV(CX,CV1_Y);
+  s+=svgLine(CX,CV1_Y+10,CX,TANK_Y);
+
+  const tankLbl=isBst?'저수조':'고가수조';
+  s+=symTank(CX,TANK_Y,120,TANK_H,tankLbl);
+  // Ball float inside tank
+  s+=`<circle cx="${CX+35}" cy="${TANK_Y+18}" r="7" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>`;
+  s+=svgText(CX+35,TANK_Y+34,'볼탭',SC.gv,7);
+  s+=svgLine(CX,TANK_BOT,CX,GV2_Y-10);
+  s+=symGV(CX,GV2_Y);
+  s+=svgLine(CX,GV2_Y+10,CX,PUMP_SUCK_Y);
+
+  if(isBst){
+    // ── Pump section ──
+    // Suction header
+    if(nPump>1) s+=svgLine(pumpXs[0],PUMP_SUCK_Y,pumpXs[nPump-1],PUMP_SUCK_Y);
+    // Main drop to suction header
+    if(CX!==pumpXs[Math.floor(nPump/2)]){
+      const midPX=pumpXs[Math.floor((nPump-1)/2)];
+      s+=svgLine(CX,PUMP_SUCK_Y,midPX,PUMP_SUCK_Y);
+    }
+
+    for(let i=0;i<nPump;i++){
+      const px=pumpXs[i];
+      s+=svgLine(px,PUMP_SUCK_Y,px,PUMP_DISC_Y);
+      s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv1,8,'GV');
+      s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj1);
+      s+=symST(px,PUMP_SUCK_Y+COMP_OFFSETS.st);
+      s+=symPump(px,PUMP_SUCK_Y+COMP_OFFSETS.pump,18,pumpLabels[i]);
+      s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj2);
+      s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv2,8,'GV');
+      s+=symCV(px,PUMP_SUCK_Y+COMP_OFFSETS.cv,8,'CV');
+    }
+
+    // Discharge header
+    if(nPump>1) s+=svgLine(pumpXs[0],PUMP_DISC_Y,pumpXs[nPump-1],PUMP_DISC_Y);
+    const midPX=pumpXs[Math.floor((nPump-1)/2)];
+    s+=svgLine(midPX,PUMP_DISC_Y,CX,PUMP_DISC_Y);
+    s+=svgLine(CX,PUMP_DISC_Y,CX,HEADER_Y);
+
+    // PG & WH on discharge header
+    s+=svgLine(CX,HEADER_Y-25,CX+60,HEADER_Y-25);
+    s+=symPG(CX+60,HEADER_Y-25);
+    s+=svgLine(CX,HEADER_Y-5,CX-60,HEADER_Y-5);
+    s+=symWH(CX-60,HEADER_Y-5);
+
+    // Bypass (emergency)
+    const bpX=pumpXs[nPump-1]+70;
+    s+=svgLine(CX,PUMP_SUCK_Y+10,bpX,PUMP_SUCK_Y+10);
+    s+=svgLine(bpX,PUMP_SUCK_Y+10,bpX,PUMP_DISC_Y-10);
+    s+=svgLine(bpX,PUMP_DISC_Y-10,CX,PUMP_DISC_Y-10);
+    s+=symGV(bpX,PUMP_SUCK_Y+40,8,'GV');
+    s+=svgText(bpX+15,PUMP_SUCK_Y+40,'비상',SC.gv,8,'start');
+    s+=symGV(bpX,PUMP_DISC_Y-40,8,'GV');
+    s+=svgText(bpX+15,PUMP_DISC_Y-40,'바이패스','#8b949e',8,'start');
+
+  } else {
+    // Gravity: simple drop
+    s+=svgLine(CX,GV2_Y+10,CX,HEADER_Y);
+  }
+
+  // ── Main pipe section ──
+  s+=svgLine(CX,HEADER_Y,CX,MAIN_END_Y,SC.pipe,2.5);
+
+  // AV at top
+  s+=svgLine(CX,MAIN_Y,CX+60,MAIN_Y);
+  s+=symAV(CX+60,MAIN_Y-10);
+
+  // EX joints
+  const exSpacing=MAIN_H/(exCnt+1);
+  for(let i=0;i<exCnt;i++){
+    const ey=MAIN_Y+exSpacing*(i+1);
+    s+=symEX(CX,ey);
+    s+=svgText(CX-55,ey+4,`${(i+1)*3}층`,SC.ex,8,'end');
+  }
+
+  // DV at bottom
+  s+=svgLine(CX,MAIN_END_Y,CX+60,MAIN_END_Y);
+  s+=symDV(CX+60,MAIN_END_Y+10);
+
+  // ── Group distribution header ──
+  s+=svgLine(CX,MAIN_END_Y,CX,GROUP_HDR_Y);
+  if(G.length){
+    const minGX=Math.min(...groupXs), maxGX=Math.max(...groupXs);
+    s+=svgLine(minGX,GROUP_HDR_Y,maxGX,GROUP_HDR_Y);
+  }
+
+  // ── Groups ──
+  for(let i=0;i<G.length;i++){
+    const g=G[i], gx=groupXs[i];
+    let gy=GROUP_HDR_Y;
+
+    // Drop from distribution header
+    s+=svgLine(gx,GROUP_HDR_Y,gx,gy+20);
+    gy+=20;
+
+    if(g.prv){
+      // GV - PRV - GV (main line)
+      s+=symGV(gx,gy+15,8,'GV');
+      s+=svgLine(gx,gy+23,gx,gy+40);
+      s+=symPRV(gx,gy+55);
+      s+=svgLine(gx,gy+67,gx,gy+80);
+      s+=symGV(gx,gy+90,8,'GV');
+      // Bypass lines
+      const bx=gx-45;
+      s+=svgLine(gx,gy+15,bx,gy+15);
+      s+=svgLine(bx,gy+15,bx,gy+90);
+      s+=svgLine(bx,gy+90,gx,gy+90);
+      s+=symGV(bx,gy+30,7,'GV');
+      s+=symGlobe(bx,gy+52,'GL');
+      s+=symGV(bx,gy+75,7,'GV');
+      s+=svgText(bx-5,gy+52,'바이패스','#8b949e',8,'end');
+      gy+=100;
+    }
+
+    // BV (branch isolation)
+    s+=svgLine(gx,gy,gx,gy+15);
+    s+=symBV(gx,gy+20,9,'BV');
+    gy+=35;
+
+    // AV and DV
+    s+=svgLine(gx,gy,gx+45,gy);
+    s+=symAV(gx+45,gy-10);
+    s+=svgLine(gx,gy+10,gx+45,gy+10);
+    s+=symDV(gx+45,gy+15);
+
+    // Group box
+    s+=svgLine(gx,gy,gx,gy+10);
+    const boxY=gy+10, boxH=g.prv?70:55;
+    s+=`<rect x="${gx-60}" y="${boxY}" width="120" height="${boxH}" fill="#161b22" stroke="${g.prv?SC.prv:'#30363d'}" stroke-width="${g.prv?2:1}" rx="5"/>`;
+    s+=svgText(gx,boxY+18,g.name,'#e6edf3',11,'middle','700');
+    s+=svgText(gx,boxY+33,`${g.pipe} | ${g.flow}L/min`,'#8b949e',9);
+    if(g.prv) s+=svgText(gx,boxY+52,`PRV ${B.prvPressure}kgf/cm²`,SC.prv,9);
+    gy+=boxH+14;
+
+    // Zones
+    for(let zi=0;zi<g.zones.length;zi++){
+      const z=g.zones[zi];
+      const zx=gx-50+zi*50;
+      if(zi===0) s+=svgLine(gx,gy,gx,gy+15);
+      s+=svgLine(gx,gy+15,zx,gy+15);
+      s+=svgLine(zx,gy+15,zx,gy+30);
+      s+=symBV(zx,gy+40,8,'BV');
+      const zBoxY=gy+55;
+      s+=`<rect x="${zx-40}" y="${zBoxY}" width="80" height="36" fill="#21262d" stroke="#30363d" rx="4"/>`;
+      s+=svgText(zx,zBoxY+14,z.name,'#e6edf3',10);
+      s+=svgText(zx,zBoxY+27,z.pipe,'#8b949e',9);
+    }
+    if(!G.length) s+=svgText(CX,GROUP_HDR_Y+50,'그룹 없음 — 계통 설정 탭에서 그룹을 추가하세요','#8b949e',11);
+  }
+  if(!G.length) s+=svgText(CX,GROUP_HDR_Y+60,'그룹 없음 — 계통 설정에서 그룹을 추가하세요','#8b949e',11);
+
+  // ── Legend ──
+  s+=renderLegend(svgW-160,40);
+
+  s+=`</svg>`;
+  document.getElementById('diagramPanel').innerHTML=`<div class="svg-scroll">${s}</div>`;
+}
+
+function renderLegend(x,y){
+  const items=[
+    {sym:'gv',lbl:'게이트밸브'},
+    {sym:'bv',lbl:'볼밸브'},
+    {sym:'cv',lbl:'체크밸브'},
+    {sym:'prv',lbl:'감압밸브'},
+    {sym:'globe',lbl:'글로브밸브'},
+    {sym:'st',lbl:'스트레이너'},
+    {sym:'av',lbl:'공기빼기'},
+    {sym:'dv',lbl:'배수밸브'},
+    {sym:'pg',lbl:'압력계'},
+    {sym:'wh',lbl:'수격방지기'},
+    {sym:'ex',lbl:'신축이음'},
+    {sym:'fj',lbl:'플렉시블'},
+  ];
+  const lh=22, lw=140, lpad=10;
+  let s=`<rect x="${x-10}" y="${y-10}" width="${lw+20}" height="${items.length*lh+26}" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1" opacity=".95"/>`;
+  s+=`<text x="${x+lw/2}" y="${y+6}" text-anchor="middle" fill="#8b949e" font-size="9" font-weight="700">범 례</text>`;
+  items.forEach((it,i)=>{
+    const iy=y+22+i*lh;
+    const col=SC[it.sym]||'#8b949e';
+    s+=`<rect x="${x}" y="${iy-7}" width="14" height="14" rx="2" fill="${col}" fill-opacity=".3" stroke="${col}" stroke-width="1"/>`;
+    s+=`<text x="${x+20}" y="${iy+4}" fill="${col}" font-size="9">${it.lbl}</text>`;
+  });
+  return s;
+}
+
+// ── Tab 3: Valve list ─────────────────────────────────────────────────────────
+function renderValveList(){
+  const {list,summary}=calcValves();
+  const COLORS={'게이트밸브':SC.gv,'볼밸브':SC.bv,'체크밸브':SC.cv,'감압밸브':SC.prv,
+    '글로브밸브':SC.globe,'Y형 스트레이너':SC.st,'공기빼기밸브':SC.av,'배수밸브':SC.dv,
+    '압력계':SC.pg,'수격방지기':SC.wh,'신축이음':SC.ex,'플렉시블조인트':SC.fj,
+    '유량계':'#58a6ff','볼탭':SC.gv};
+
+  const prvGroups=S.groups.filter(g=>g.prv);
+  let h='';
+
+  if(prvGroups.length){
+    h+=`<div class="warn-banner">⚠️ 감압밸브(PRV) 설치 필요 그룹: `;
+    h+=prvGroups.map(g=>`<strong>${esc(g.name)}</strong> — 분기점에 PRV + 바이패스 설치 필요`).join(' / ');
+    h+=`</div>`;
+  }
+
+  // Summary cards
+  h+=`<div class="valve-summary-grid">`;
+  for(const [name,qty] of Object.entries(summary)){
+    if(!qty) continue;
+    const col=COLORS[name]||'#8b949e';
+    h+=`<div class="vscard">
+      <div class="vscard-name" style="color:${col}">${name}</div>
+      <div class="vscard-count" style="color:${col}">${qty}</div>
+      <div class="vscard-unit">개</div>
+    </div>`;
+  }
+  h+=`</div>`;
+
+  // Detail table
+  h+=`<div class="section"><div class="section-title">상세 밸브 목록</div>
+    <table class="vlist"><thead><tr>
+      <th>No.</th><th>설치 위치</th><th>기기명</th><th>규격</th><th>구경</th><th>수량</th><th>비고</th>
+    </tr></thead><tbody>`;
+  for(const item of list){
+    const col=COLORS[item.name]||'#8b949e';
+    h+=`<tr>
+      <td style="color:var(--text2)">${item.no}</td>
+      <td>${esc(item.pos)}</td>
+      <td><span style="color:${col};font-weight:600">${esc(item.name)}</span></td>
+      <td>${esc(item.spec)}</td>
+      <td><span class="badge" style="background:${col}22;border:1px solid ${col}66;color:${col}">${esc(item.pipe)}</span></td>
+      <td style="font-weight:700">${item.qty}</td>
+      <td style="color:var(--text2)">${esc(item.note)}</td>
+    </tr>`;
+  }
+  h+=`</tbody></table></div>`;
+  document.getElementById('valvePanel').innerHTML=h;
+}
+
+// ── Tab 4: Guide ──────────────────────────────────────────────────────────────
+function renderGuide(){
+  const guides=[
+    {icon:'⊞',color:SC.gv,badge:'완전개폐',title:'게이트밸브 (GV)',
+     body:`완전 개폐 전용이며 유량 조절에는 사용하지 않습니다.<br>대구경(65A 이상) 메인관과 펌프 주변 배관에 주로 사용합니다.<br>펌프 흡입측에는 유체 저항이 적은 게이트밸브를 사용해야 합니다.`,
+     tip:'펌프 흡입측 배관은 유체 저항 최소화가 핵심입니다. 흡입 배관이 길거나 저항이 클수록 공동현상(캐비테이션)이 발생할 수 있습니다.'},
+    {icon:'●',color:SC.bv,badge:'Zone분기',title:'볼밸브 (BV)',
+     body:`90° 회전으로 빠른 개폐가 가능합니다.<br>소구경(15A~100A) Zone 분기 및 세대 입구 차단밸브로 표준 사용됩니다.<br>완전 개방 시 유체 저항이 거의 없습니다.`,
+     tip:'Zone 분기 차단밸브의 표준입니다. 빠른 긴급 차단이 필요한 위치에 적합합니다.'},
+    {icon:'→',color:SC.cv,badge:'역류방지',title:'체크밸브 (CV)',
+     body:`역류를 방지하고 한 방향만 흐름을 허용합니다.<br>펌프 토출측에 반드시 설치합니다.<br>수평 배관: 스윙형, 수직 배관: 리프트형을 사용합니다.`,
+     tip:'펌프 정지 시 역류에 의한 수격(워터해머)을 방지합니다. 토출측 체크밸브는 펌프 임펠러 보호에도 중요합니다.'},
+    {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',
+     body:`1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치하며, 반드시 바이패스 배관을 함께 설치합니다.<br>전후 게이트밸브 + 바이패스 글로브밸브를 세트로 구성합니다.`,
+     tip:`설정압은 적정 급수압(최대 ${S.building.prvPressure}kgf/cm²) 이하로 설정합니다. 바이패스는 PRV 점검·교체 시 단수 없이 급수 유지를 위한 것입니다.`},
+    {icon:'○',color:SC.globe,badge:'유량조절',title:'글로브밸브',
+     body:`유량의 미세 조절이 가능합니다.<br>감압밸브 바이패스 배관에서 수동 압력 조절용으로 사용합니다.<br>유체 저항이 커서 메인 배관에는 사용하지 않습니다.`,
+     tip:'바이패스 운전 시 서서히 열어 하류 압력을 확인하면서 조절하세요. 급격한 개방은 하류 배관에 충격을 줄 수 있습니다.'},
+    {icon:'Y',color:SC.st,badge:'이물질포집',title:'Y형 스트레이너 (ST)',
+     body:`이물질을 포집하여 펌프 임펠러와 밸브 시트를 보호합니다.<br>펌프 흡입측 직전에 반드시 설치합니다.<br>정기적인 청소(플러싱)가 필요합니다.`,
+     tip:'청소구 방향이 아래를 향하도록 설치해야 청소가 용이합니다. 이물질 누적 시 흡입 저항 증가로 펌프 효율이 저하됩니다.'},
+    {icon:'↑',color:SC.av,badge:'공기배출',title:'공기빼기밸브 (AV)',
+     body:`배관 내 공기를 자동으로 배출합니다.<br>메인관 최고점 및 각 계통 최상부에 설치합니다.<br>자동식(플로트형)을 사용하여 공기 고임을 방지합니다.`,
+     tip:'공기 고임은 유량 감소, 이상 소음, 배관 부식의 원인입니다. 공기빼기밸브 설치 위치가 배관 최고점인지 반드시 확인하세요.'},
+    {icon:'⌁',color:SC.wh,badge:'수격흡수',title:'수격방지기 (WH)',
+     body:`펌프 기동·정지 시 발생하는 수격(워터해머)을 흡수합니다.<br>펌프 토출 헤더에 설치합니다.<br>내부 질소 가스로 충격을 완충합니다.`,
+     tip:'1~2년마다 질소 재충전이 필요합니다. 충전 압력이 낮아지면 수격 흡수 성능이 저하됩니다.'},
+    {icon:'≈',color:SC.fj,badge:'진동차단',title:'플렉시블조인트 (FJ)',
+     body:`펌프 진동과 소음의 건물 구조 전달을 차단합니다.<br>펌프 흡입·토출 연결부 양쪽에 각 1개씩 설치합니다.<br>고온 배관에는 스테인리스 벨로우즈 타입을 사용합니다.`,
+     tip:'설치 방향을 반드시 확인하세요. 잘못된 방향은 진동 차단 효과가 없습니다. 고압 배관에서는 내압 사양을 확인하세요.'},
+    {icon:'~',color:SC.ex,badge:'열팽창흡수',title:'신축이음 (EX)',
+     body:`배관의 열팽창 및 수축을 흡수합니다.<br>수직관 3층마다 1개씩 설치합니다 (총 ${Math.ceil(S.building.floors/3)}개).<br>벨로우즈형이 일반적이며, 급탕관에는 더 자주 설치합니다.`,
+     tip:`본 건물(${S.building.floors}층)의 신축이음은 ${Math.ceil(S.building.floors/3)}개가 필요합니다. 설치 위치는 고정 브래킷과 가이드 서포트를 함께 고려해야 합니다.`},
+  ];
+
+  let h='';
+  for(const g of guides){
+    h+=`<div class="guide-card">
+      <div class="guide-hdr" onclick="toggleGuide(this)">
+        <div class="guide-icon" style="background:${g.color}22;border:1px solid ${g.color}66">
+          <span style="color:${g.color}">${g.icon}</span>
+        </div>
+        <span class="guide-title">${g.title}</span>
+        <span class="guide-badge" style="background:${g.color}22;color:${g.color};border:1px solid ${g.color}55">${g.badge}</span>
+        <span class="ml" style="color:var(--text2);font-size:12px">▼</span>
+      </div>
+      <div class="guide-body">
+        <p>${g.body}</p>
+        <div class="guide-tip"><strong>실무 팁 :</strong> ${g.tip}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('guidePanel').innerHTML=`<div class="page">${h}</div>`;
+}
+function toggleGuide(el){
+  const body=el.nextElementSibling;
+  const arr=el.querySelector('.ml');
+  body.classList.toggle('open');
+  if(arr) arr.textContent=body.classList.contains('open')?'▲':'▼';
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function setSystem(v){S.system=v;renderAll();}
+function setPump(k,v){S.pump[k]=v;recalcPRV();renderAll();}
+function setBuilding(k,v){S.building[k]=v;recalcPRV();renderAll();}
+function recalcPRV(){for(const g of S.groups)g.prv=needsPRV(g.floor||1);}
+
+function addGroup(){
+  S.groups.push({id:uid(),name:`그룹 ${S.groups.length+1}`,flow:100,pipe:'65A',floor:1,prv:false,zones:[]});
+  recalcPRV(); renderAll();
+}
+function delGroup(id){
+  if(!confirm('그룹을 삭제하시겠습니까?')) return;
+  S.groups=S.groups.filter(g=>g.id!==id); renderAll();
+}
+function setGroupName(id,v){const g=S.groups.find(g=>g.id===id);if(g)g.name=v;}
+function setGroupVal(id,k,v){const g=S.groups.find(g=>g.id===id);if(g){g[k]=v;renderAll();}}
+function setGroupFloor(id,v){
+  const g=S.groups.find(g=>g.id===id);
+  if(g){g.floor=v;g.prv=needsPRV(v);renderAll();}
+}
+function addZone(gid){
+  const g=S.groups.find(g=>g.id===gid);if(!g)return;
+  g.zones.push({name:`Zone ${g.zones.length+1}`,pipe:'40A'});renderAll();
+}
+function delZone(gid,idx){
+  const g=S.groups.find(g=>g.id===gid);if(!g)return;
+  g.zones.splice(idx,1);renderAll();
+}
+function setZoneProp(gid,idx,k,v){
+  const g=S.groups.find(g=>g.id===gid);if(!g)return;
+  g.zones[idx][k]=v;
+}
+function resetAll(){
+  if(!confirm('모든 설정을 초기화하시겠습니까?')) return;
+  S.projectName='새 프로젝트'; S.system='booster';
+  S.pump={count:2,pressure:7,flow:300,mainPipe:'100A'};
+  S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5};
+  S.groups=[]; _id=1;
+  document.getElementById('projectName').value='새 프로젝트';
+  renderAll();
+}
+
+// ── Save / Load ───────────────────────────────────────────────────────────────
+function saveJSON(){
+  S.projectName=document.getElementById('projectName').value||S.projectName;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,2)],{type:'application/json'}));
+  a.download=(S.projectName||'프로젝트')+'_밸브.json'; a.click();
+}
+function loadJSON(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      Object.assign(S,JSON.parse(ev.target.result));
+      let mx=0;
+      S.groups.forEach(g=>{const n=parseInt(g.id?.slice(1));if(n>mx)mx=n;});
+      _id=mx+1;
+      document.getElementById('projectName').value=S.projectName||'';
+      renderAll();
+    }catch{alert('JSON 파일 형식이 올바르지 않습니다.');}
+  };
+  r.readAsText(f); e.target.value='';
+}
+function loadWaterApp(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      const cwGroups=d.cw?.groups||[];
+      const zones=d.zones||[];
+      S.groups=cwGroups.map(cg=>{
+        const zoneObjs=(cg.zoneIds||[]).map(zid=>{
+          const z=zones.find(z=>z.id===zid);
+          return z?{name:z.name,pipe:z.tree?'40A':'40A'}:{name:zid,pipe:'40A'};
+        });
+        return {id:uid(),name:cg.name||'그룹',flow:100,pipe:'65A',floor:1,prv:false,zones:zoneObjs};
+      });
+      recalcPRV();
+      renderAll();
+      alert(`급수앱 데이터 연동 완료.\n그룹 ${S.groups.length}개, Zone ${S.groups.reduce((s,g)=>s+g.zones.length,0)}개 불러왔습니다.\n유량·관경은 직접 확인 후 수정하세요.`);
+    }catch{alert('급수앱 JSON 형식이 올바르지 않습니다.');}
+  };
+  r.readAsText(f); e.target.value='';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.getElementById('projectName').addEventListener('change',function(){S.projectName=this.value;});
+renderAll();
+</script>
+</body>
+</html>
