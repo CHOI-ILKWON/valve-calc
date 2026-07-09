@@ -167,7 +167,9 @@ function calcValves(){
   if(isBst){
     add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
     add('수도 인입부','체크밸브','체크밸브(역류방지)',inletPipe,1,'저수조 입구 전');
-    add('저수조 내부','볼탭','볼탭(전동밸브)','25A',1,'수위 조절');
+    add('수도 인입부','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,'저수조 인입 LCV – 수위 차면 자동 차단');
+    add('수도 인입부','게이트밸브','게이트밸브(LCV 바이패스)',inletPipe,2,'LCV 바이패스 전·후 차단용');
+    add('저수조 내부','볼탭','볼탭(기계식 보조)','25A',1,'LCV 고장 시 2차 수위 조절');
     add('저수조 출구','게이트밸브','게이트밸브(출구공통)',pumpPipe,1,'저수조 출구');
     add('펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`);
     add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,P.count,`×${P.count}대`);
@@ -215,7 +217,7 @@ function calcValves(){
 
   // Summary
   const names=['게이트밸브','볼밸브','체크밸브','감압밸브','글로브밸브','Y형 스트레이너',
-    '공기빼기밸브','배수밸브','압력계','수격방지기','신축이음','플렉시블조인트','유량계','볼탭'];
+    '공기빼기밸브','배수밸브','압력계','수격방지기','신축이음','플렉시블조인트','유량계','볼탭','수위조절밸브(LCV)'];
   const summary={};
   for(const n of names) summary[n]=0;
   for(const item of list) summary[item.name]=(summary[item.name]||0)+item.qty;
@@ -492,6 +494,14 @@ function symGlobe(x,y,lbl='GL'){
     ${svgText(x+14,y+4,lbl,SC.globe,8,'start')}
   </g>`;
 }
+function symLCV(x,y,s=11,lbl='LCV'){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="${s}" fill="none" stroke="#58a6ff" stroke-width="1.5"/>
+    <line x1="${x-s}" y1="${y}" x2="${x+s}" y2="${y}" stroke="#58a6ff" stroke-width="1.5"/>
+    <line x1="${x}" y1="${y-s}" x2="${x}" y2="${y+s}" stroke="#58a6ff" stroke-width="1.5"/>
+    <text x="${x+s+6}" y="${y+4}" text-anchor="start" fill="#58a6ff" font-size="8">${lbl}</text>
+  </g>`;
+}
 function symTank(x,y,w,h,lbl){
   return `<g>
     <rect x="${x-w/2}" y="${y}" width="${w}" height="${h}" fill="#161b22" stroke="#30363d" stroke-width="1.5" rx="4"/>
@@ -523,7 +533,7 @@ function renderDiagram(){
   });
 
   // Y layout
-  const INLET_Y=40, GV1_Y=90, CV1_Y=140, TANK_Y=180;
+  const INLET_Y=40, GV1_Y=90, CV1_Y=140, TANK_Y=310;
   const TANK_H=80, TANK_BOT=TANK_Y+TANK_H;
   const GV2_Y=TANK_BOT+35;
   const PUMP_SUCK_Y=GV2_Y+55;
@@ -554,8 +564,30 @@ function renderDiagram(){
   s+=svgLine(CX,GV1_Y+10,CX,CV1_Y-10);
   s+=svgText(CX-7,(GV1_Y+CV1_Y)/2+4,inletPipe,'#8b949e',8,'end');
   s+=symCV(CX,CV1_Y);
-  s+=svgLine(CX,CV1_Y+10,CX,TANK_Y);
-  s+=svgText(CX-7,(CV1_Y+TANK_Y)/2+4,inletPipe,'#8b949e',8,'end');
+  // ── LCV bypass section ──
+  {
+    const LCV_TOP=CV1_Y+30, LCV_Y=CV1_Y+80, LCV_BOT=CV1_Y+130, BP_X=CX+80;
+    // main line: CV → split → LCV → join → tank
+    s+=svgLine(CX,CV1_Y+10,CX,LCV_TOP);
+    // split horizontal to bypass
+    s+=svgLine(CX,LCV_TOP,BP_X,LCV_TOP);
+    // main line continues through LCV
+    s+=svgLine(CX,LCV_TOP,CX,LCV_Y-11);
+    s+=symLCV(CX,LCV_Y);
+    s+=svgLine(CX,LCV_Y+11,CX,LCV_BOT);
+    // join horizontal from bypass
+    s+=svgLine(CX,LCV_BOT,BP_X,LCV_BOT);
+    s+=svgLine(CX,LCV_BOT,CX,TANK_Y);
+    // bypass vertical
+    s+=svgLine(BP_X,LCV_TOP,BP_X,LCV_BOT);
+    // bypass GVs (normally closed)
+    s+=symGV(BP_X,LCV_TOP+35,8,'GV');
+    s+=symGV(BP_X,LCV_BOT-35,8,'GV');
+    s+=svgText(BP_X+20,(LCV_TOP+LCV_BOT)/2+4,'바이패스','#d29922',7,'start');
+    s+=svgText(BP_X+20,(LCV_TOP+LCV_BOT)/2+14,'(평상시 닫힘)','#d29922',7,'start');
+    // pipe labels
+    s+=svgText(CX-7,(CV1_Y+TANK_Y)/2+4,inletPipe,'#8b949e',8,'end');
+  }
 
   const tankLbl=isBst?'저수조':'고가수조';
   s+=symTank(CX,TANK_Y,120,TANK_H,tankLbl);
