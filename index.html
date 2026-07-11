@@ -130,6 +130,7 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
   <div class="hbtns">
     <button class="btn btn-ghost" onclick="window.print()">🖨 PDF</button>
     <button class="btn btn-success" onclick="saveJSON()">💾 저장</button>
+    <button class="btn btn-ghost" onclick="exportCSV()">📊 엑셀</button>
     <label class="btn btn-ghost" style="cursor:pointer">📂 불러오기<input type="file" accept=".json" style="display:none" onchange="loadJSON(event)"></label>
     <label class="btn btn-warn" style="cursor:pointer">🔗 급수앱 연동<input type="file" accept=".json" style="display:none" onchange="loadWaterApp(event)"></label>
     <button class="btn btn-danger" onclick="resetAll()">🔄 초기화</button>
@@ -158,6 +159,7 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 const S={
   projectName:'새 프로젝트',
   system:'booster',
+  material:'sts',
   pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A'},
   building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3},
   groups:[]
@@ -180,11 +182,40 @@ function needsPRV(floor){
   return floorPressure(floor) > S.building.targetPressure;
 }
 function groupMaxPressure(g){
-  // 담당 층범위가 지정된 그룹의 최대 압력(범위 내 최저층 기준)
+  // 담당 층범위가 지정된 입상관의 최대 압력(범위 내 최저층 기준)
   if(!g.fromFloor&&!g.toFloor) return null;
   const a=+g.fromFloor||+g.toFloor, b=+g.toFloor||+g.fromFloor;
   const lo=Math.max(1,Math.min(S.building.floors,Math.min(a,b)));
   return floorPressure(lo);
+}
+
+// ── 재질/등급 자동 산정 ─────────────────────────────────────────────────────
+// 소구경(≤50A) 나사·프레스식 / 대구경(≥65A) 플랜지·그루브드식 기준
+function valveMat(name,pipe){
+  const preset=S.material||'sts';
+  const rating=(S.system==='booster'&&S.pump.pressure>=10)?'16K':'10K';
+  const big=PIPES.indexOf(pipe)>=PIPES.indexOf('65A');
+  const smallBody=preset==='general'?`청동 나사식 ${rating}`:`STS304 나사식 ${rating}`;
+  const bigBody=preset==='allsts'?`STS304 플랜지식 ${rating}`:`덕타일주철(STS 디스크) 플랜지식 ${rating}`;
+  switch(name){
+    case '게이트밸브': case '볼밸브': case '글로브밸브': case 'Y형 스트레이너':
+      return big?bigBody:smallBody;
+    case '체크밸브':
+      return big?`주철 스모렌스키 ${rating}`:(preset==='general'?`청동 스윙식 ${rating}`:`STS304 스윙식 ${rating}`);
+    case '감압밸브':
+      return preset==='allsts'?`STS 파일럿식 ${rating}`:`주철 파일럿식 ${rating}`;
+    case '수위조절밸브(LCV)':
+      return big?`주철 플랜지식 ${rating}`:`청동/STS ${rating}`;
+    case '공기빼기밸브': return '청동/STS 자동식(플로트형)';
+    case '배수밸브': return preset==='general'?'청동 나사식':'STS304 나사식';
+    case '볼탭': return '청동';
+    case '신축이음': return 'STS 벨로우즈형';
+    case '플렉시블조인트': return 'STS 벨로우즈형';
+    case '수격방지기': return 'STS 다이어프램식';
+    case '압력탱크': return '다이어프램식(질소충전)';
+    case '압력계': return 'STS 케이스, 글리세린 충입';
+    default: return '-';
+  }
 }
 
 function calcValves(){
@@ -194,7 +225,7 @@ function calcValves(){
   const pumpPipe=P.pumpPipe||'65A';
   const list=[];
   let no=1;
-  function add(pos,name,spec,pipe,qty,note=''){list.push({no:no++,pos,name,spec,pipe,qty,note});}
+  function add(pos,name,spec,pipe,qty,note=''){list.push({no:no++,pos,name,spec,pipe,qty,note,mat:valveMat(name,pipe)});}
 
   if(isBst){
     add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
@@ -229,7 +260,7 @@ function calcValves(){
   add('메인 수직관','신축이음','벨로우즈형 신축이음',P.mainPipe,exCnt,`${B.floors}층÷3=${exCnt}개`);
 
   for(const g of G){
-    add(`${g.name} 입상관`,'볼밸브','볼밸브(입상관 차단)',g.pipe,1,'메인 분기');
+    add(`${g.name} 분기`,'볼밸브','볼밸브(입상관 차단)',g.pipe,1,'메인 분기');
     if(g.prv){
       add(`${g.name} PRV 입구`,'게이트밸브','게이트밸브(입구차단)',g.pipe,1,'PRV 입구');
       add(`${g.name} PRV`,'Y형 스트레이너','Y형 스트레이너(시트보호)',g.pipe,1,'감압밸브 전');
@@ -368,6 +399,24 @@ function renderSettings(){
     </div>
   </div>`;
 
+  // Material preset
+  const rating=(S.system==='booster'&&S.pump.pressure>=10)?'16K':'10K';
+  h+=`<div class="section">
+    <div class="section-title">밸브 재질 사양</div>
+    <div class="form-row">
+      <span class="form-label">재질 프리셋</span>
+      <select onchange="setMaterial(this.value)" style="max-width:100%">
+        <option value="sts"${(S.material||'sts')==='sts'?' selected':''}>STS 표준 — 소구경 STS304 나사식 / 대구경 덕타일주철+STS디스크 (권장)</option>
+        <option value="allsts"${S.material==='allsts'?' selected':''}>전체 STS — 전 구경 STS304 (고급 사양)</option>
+        <option value="general"${S.material==='general'?' selected':''}>일반 — 소구경 청동 / 대구경 주철</option>
+      </select>
+    </div>
+    <div style="font-size:11px;color:var(--text2)">
+      ※ 밸브 목록의 재질/등급 컬럼에 자동 반영됩니다. 소구경(50A 이하) 나사·프레스식, 대구경(65A 이상) 플랜지·그루브드식 기준.<br>
+      ※ 압력등급 현재 <strong style="color:var(--accent)">${rating}</strong> — 펌프 토출압 10kgf/cm² 이상이면 16K 자동 적용.
+    </div>
+  </div>`;
+
   // Floor pressure table
   const p1=floorPressure(1);
   if(B.prvPressure>0&&p1/B.prvPressure>3){
@@ -397,10 +446,10 @@ function renderSettings(){
   // Groups
   h+=`<div class="section">
     <div class="fr mb">
-      <span class="section-title" style="margin:0">그룹 / Zone 설정</span>
-      <button class="btn btn-primary btn-sm ml" onclick="addGroup()">+ 그룹 추가</button>
+      <span class="section-title" style="margin:0">입상관 / Zone 설정</span>
+      <button class="btn btn-primary btn-sm ml" onclick="addGroup()">+ 입상관 추가</button>
     </div>`;
-  if(!S.groups.length) h+=`<div style="color:var(--text2);font-size:13px;padding:12px 0">그룹을 추가하세요.</div>`;
+  if(!S.groups.length) h+=`<div style="color:var(--text2);font-size:13px;padding:12px 0">입상관을 추가하세요.</div>`;
   for(const g of S.groups){
     const fps=g.floorPipes||[];
     const floorBVs=fps.reduce((s,fp)=>s+(+fp.qty||0),0);
@@ -414,7 +463,7 @@ function renderSettings(){
     }
     h+=`<div class="group-card">
       <div class="group-hdr">
-        <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="그룹명(입상관)">
+        <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="입상관명">
         <select onchange="setGroupVal('${g.id}','pipe',this.value)">
           ${PIPES.map(p=>`<option${p===g.pipe?' selected':''}>${p}</option>`).join('')}
         </select>
@@ -849,7 +898,7 @@ function renderDiagram(){
     s+=svgText(gx,gy+46,`층별주관 BV × ${floorBVs}개`,SC.bv,9);
     s+=svgText(gx,gy+60,`화장실 BV × ${zoneBVs}개`,SC.bv,9);
   }
-  if(!G.length) s+=svgText(CX,GROUP_HDR_Y+60,'그룹 없음 — 계통 설정에서 그룹을 추가하세요',TH.text2,11);
+  if(!G.length) s+=svgText(CX,GROUP_HDR_Y+60,'입상관 없음 — 계통 설정에서 입상관을 추가하세요',TH.text2,11);
 
   // ── Legend ──
   s+=renderLegend(svgW-160,40);
@@ -898,7 +947,7 @@ function renderValveList(){
   let h='';
 
   if(prvGroups.length){
-    h+=`<div class="warn-banner">⚠️ 감압밸브(PRV) 설치 필요 그룹: `;
+    h+=`<div class="warn-banner">⚠️ 감압밸브(PRV) 설치 필요 입상관: `;
     h+=prvGroups.map(g=>`<strong>${esc(g.name)}</strong> — 분기점에 PRV + 바이패스 설치 필요`).join(' / ');
     h+=`</div>`;
   }
@@ -928,9 +977,13 @@ function renderValveList(){
   h+=`</div>`;
 
   // Detail table
-  h+=`<div class="section"><div class="section-title">상세 밸브 목록</div>
+  h+=`<div class="section">
+    <div class="fr mb">
+      <span class="section-title" style="margin:0">상세 밸브 목록</span>
+      <button class="btn btn-success btn-sm ml" onclick="exportCSV()">📊 엑셀(CSV) 내보내기</button>
+    </div>
     <table class="vlist"><thead><tr>
-      <th>No.</th><th>설치 위치</th><th>기기명</th><th>규격</th><th>구경</th><th>수량</th><th>비고</th>
+      <th>No.</th><th>설치 위치</th><th>기기명</th><th>규격</th><th>재질/등급</th><th>구경</th><th>수량</th><th>비고</th>
     </tr></thead><tbody>`;
   for(const item of list){
     const col=COLORS[item.name]||'#8b949e';
@@ -939,6 +992,7 @@ function renderValveList(){
       <td>${esc(item.pos)}</td>
       <td><span style="color:${col};font-weight:600">${esc(item.name)}</span></td>
       <td>${esc(item.spec)}</td>
+      <td style="color:var(--text2)">${esc(item.mat||'-')}</td>
       <td><span class="badge" style="background:${col}22;border:1px solid ${col}66;color:${col}">${esc(item.pipe)}</span></td>
       <td style="font-weight:700">${item.qty}</td>
       <td style="color:var(--text2)">${esc(item.note)}</td>
@@ -1017,6 +1071,36 @@ function toggleGuide(el){
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 function setSystem(v){S.system=v;renderAll();}
+function setMaterial(v){S.material=v;renderAll();}
+
+// ── 엑셀(CSV) 내보내기 ────────────────────────────────────────────────────────
+function exportCSV(){
+  S.projectName=document.getElementById('projectName').value||S.projectName;
+  const {list,summary}=calcValves();
+  const rows=[];
+  rows.push([S.projectName+' — 밸브 목록',
+    (S.system==='booster'?'부스터펌프식':'고가수조식'),
+    `${S.building.floors}층`, '출력일 '+new Date().toISOString().slice(0,10)]);
+  rows.push([]);
+  rows.push(['No.','설치 위치','기기명','규격','재질/등급','구경','수량','비고']);
+  for(const i of list) rows.push([i.no,i.pos,i.name,i.spec,i.mat||'',i.pipe,i.qty,i.note]);
+  rows.push([]);
+  rows.push(['[집계]','기기명','수량 합계','구경별']);
+  const byPipe={};
+  for(const i of list){const m=byPipe[i.name]=byPipe[i.name]||{};m[i.pipe]=(m[i.pipe]||0)+i.qty;}
+  for(const [n,q] of Object.entries(summary)){
+    if(!q) continue;
+    const detail=Object.keys(byPipe[n]||{}).sort((a,b)=>PIPES.indexOf(a)-PIPES.indexOf(b))
+      .map(p=>`${p}×${byPipe[n][p]}`).join(' / ');
+    rows.push(['',n,q,detail]);
+  }
+  // BOM을 붙여 한글이 엑셀에서 깨지지 않게 함
+  const csv=String.fromCharCode(0xFEFF)+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');
+  a.href=url; a.download=(S.projectName||'프로젝트')+'_밸브목록.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 // 숫자 입력 검증: NaN·범위 초과 방지
 function clampNum(v,min,max,fb){v=+v;if(!isFinite(v))return fb;return Math.min(max,Math.max(min,v));}
 const NUM_RULES={
@@ -1036,11 +1120,11 @@ function setBuilding(k,v){
 }
 
 function addGroup(){
-  S.groups.push({id:uid(),name:`그룹 ${S.groups.length+1}`,pipe:'65A',prv:false,floorPipes:[],zones:[]});
+  S.groups.push({id:uid(),name:`입상관 ${S.groups.length+1}`,pipe:'65A',prv:false,floorPipes:[],zones:[]});
   renderAll();
 }
 function delGroup(id){
-  if(!confirm('그룹을 삭제하시겠습니까?')) return;
+  if(!confirm('입상관을 삭제하시겠습니까?')) return;
   S.groups=S.groups.filter(g=>g.id!==id); renderAll();
 }
 function setGroupName(id,v){const g=S.groups.find(g=>g.id===id);if(g){g.name=v;persist();}}
@@ -1072,7 +1156,7 @@ function setFloorPipeProp(gid,idx,k,v){
 }
 function resetAll(){
   if(!confirm('모든 설정을 초기화하시겠습니까?')) return;
-  S.projectName='새 프로젝트'; S.system='booster';
+  S.projectName='새 프로젝트'; S.system='booster'; S.material='sts';
   S.pump={count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A'};
   S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3};
   S.groups=[]; _id=1;
@@ -1099,6 +1183,7 @@ function loadJSON(e){
       if(S.building.tankHeight==null)S.building.tankHeight=3;
       if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
       if(!S.pump.inletPipe)S.pump.inletPipe='50A';
+      if(!S.material)S.material='sts';
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt(g.id?.slice(1));if(n>mx)mx=n;});
       _id=mx+1;
