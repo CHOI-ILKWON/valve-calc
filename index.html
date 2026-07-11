@@ -191,6 +191,43 @@ function groupMaxPressure(g){
   return floorPressure(lo);
 }
 
+// ── 마찰손실 (Hazen-Williams, STS C=150) ────────────────────────────────────
+const DIA={'15A':.016,'20A':.021,'25A':.027,'32A':.036,'40A':.041,'50A':.053,'65A':.066,'80A':.078,'100A':.102,'125A':.127,'150A':.151};
+// 밸브 L/D 상당길이 계수 (완전개방 기준)
+const LDV={'볼밸브':3,'게이트밸브':8,'체크밸브':135,'Y형 스트레이너':250,'글로브밸브':340,'유량계':45};
+function hwR(QLpm,Dm){ // 단위 마찰손실 (m/m)
+  const Q=QLpm/60000; // m³/s
+  return 10.666*Math.pow(Q,1.85)/(Math.pow(150,1.85)*Math.pow(Dm,4.87));
+}
+function groupFriction(g){
+  const B=S.building,P=S.pump;
+  const Q=+g.flowLpm||0;
+  if(!Q) return null;
+  const D=DIA[g.pipe]||.053;
+  const hi=Math.max(+g.fromFloor||0,+g.toFloor||0)||B.floors;
+  const Lv=Math.max(0,(hi-1)*B.floorHeight); // 수직: 담당층 자동
+  const Lh=+g.horizLen||0;
+  // 경로상 밸브 상당길이: 분기BV + 층별주관BV + 화장실BV (+PRV 전 GV×2, 스트레이너)
+  let ld=LDV['볼밸브']*3;
+  if(g.prv) ld+=LDV['게이트밸브']*2+LDV['Y형 스트레이너'];
+  const Le=ld*D;
+  const Lfit=0.2*(Lv+Lh); // 엘보·티 개산(직관장 20%)
+  const hf=hwR(Q,D)*(Lv+Lh+Le+Lfit); // m
+  // 기계실 구간(부스터·비PRV만 — PRV는 2차압으로 리셋되므로 이전 손실 무관)
+  let hfMr=0;
+  if(S.system==='booster'&&!g.prv){
+    const Dm=DIA[P.mainPipe]||.102;
+    const LeM=(LDV['체크밸브']+LDV['게이트밸브']+LDV['유량계'])*Dm;
+    const Lm=+P.mrLen||8;
+    hfMr=hwR(+P.flow||0,Dm)*(Lm*1.2+LeM);
+  }
+  let endP;
+  if(S.system==='gravity') endP=floorPressure(hi)-hf/10;
+  else if(g.prv) endP=B.prvPressure-(hi-1)*B.floorHeight*0.1-hf/10;
+  else endP=P.pressure-(hi-1)*B.floorHeight*0.1-(hf+hfMr)/10;
+  return {Q,hi,Lv,Lh,Le,Lfit,hf:hf/10,hfMr:hfMr/10,endP};
+}
+
 // ── 재질/등급 자동 산정 ─────────────────────────────────────────────────────
 // 소구경(≤50A) 나사·프레스식 / 대구경(≥65A) 플랜지·그루브드식 기준
 function valveMat(name,pipe){
@@ -558,6 +595,47 @@ function renderSettings(){
     </div>`;
   }
   h+=`</div>`;
+
+  // 마찰손실 검토
+  h+=`<div class="section"><div class="section-title">마찰손실 검토 (Hazen-Williams · STS C=150)</div>`;
+  if(S.system==='booster'){
+    h+=`<div class="form-row">
+      <span class="form-label">기계실 배관 길이 (m)</span>
+      <input class="form-inp sm" type="number" step="1" value="${P.mrLen??8}" onchange="setPump('mrLen',+this.value)">
+      <span style="font-size:11px;color:var(--text2)">펌프 토출 ~ 입상관 분기까지 배관 길이 합계</span>
+    </div>`;
+  }
+  if(!S.groups.length){
+    h+=`<div style="color:var(--text2);font-size:12px;padding:6px 0">입상관을 추가하고 유량을 입력하면 검토표가 나타납니다.</div></div>`;
+  } else {
+    h+=`<table class="floor-table"><thead><tr>
+      <th>입상관</th><th>유량 (L/min)</th><th>수평길이 (m)</th><th>수직 (자동)</th><th>밸브·부속 상당길이</th><th>마찰손실 (kgf/cm²)</th><th>말단 예상압</th><th>판정</th>
+    </tr></thead><tbody>`;
+    for(const g of S.groups){
+      const r=groupFriction(g);
+      h+=`<tr>
+        <td style="font-weight:600">${esc(g.name)}${g.prv?' <span style="color:var(--warn);font-size:10px">PRV</span>':''}</td>
+        <td><input class="zone-inp" type="number" min="0" style="width:72px" value="${g.flowLpm||''}" placeholder="—" onchange="setGroupVal('${g.id}','flowLpm',this.value?+this.value:null)"></td>
+        <td><input class="zone-inp" type="number" min="0" style="width:60px" value="${g.horizLen||''}" placeholder="0" onchange="setGroupVal('${g.id}','horizLen',this.value?+this.value:null)"></td>`;
+      if(r){
+        const ok=r.endP>=MIN_PRESSURE;
+        h+=`<td>${r.Lv.toFixed(1)}m</td>
+          <td>${(r.Le+r.Lfit).toFixed(1)}m</td>
+          <td>${(r.hf+r.hfMr).toFixed(2)}</td>
+          <td style="font-weight:700">${r.endP.toFixed(2)}</td>
+          <td>${ok?'<span class="ok-chip">적정</span>':'<span class="bad-chip">압력부족</span>'}</td>`;
+      } else {
+        h+=`<td colspan="5" style="color:var(--text2)">← 유량 입력 시 자동 계산</td>`;
+      }
+      h+=`</tr>`;
+    }
+    h+=`</tbody></table>
+    <div style="font-size:11px;color:var(--text2);margin-top:8px">
+      ※ 수직길이는 담당층(미입력 시 최고층)×층고로 자동. 밸브 상당길이는 경로상 밸브(분기·층주관·화장실 볼밸브, PRV 전 게이트×2·스트레이너)를 L/D 환산해 자동 반영, 엘보·티는 직관장의 20% 개산.<br>
+      ※ 말단 예상압 = 시작압 − 최고층 정수두 − 마찰손실. PRV 입상관은 2차 설정압(분기부 설치 가정) 기준${S.system==='booster'?', 비PRV 입상관은 펌프 토출압 기준(기계실 구간 손실 포함)':''}. 최소 필요압 ${MIN_PRESSURE}kgf/cm²(세정밸브 1.0).
+    </div></div>`;
+  }
+
   document.getElementById('settingsPanel').innerHTML=h;
 }
 
@@ -1389,7 +1467,7 @@ function exportCSV(){
 // 숫자 입력 검증: NaN·범위 초과 방지
 function clampNum(v,min,max,fb){v=+v;if(!isFinite(v))return fb;return Math.min(max,Math.max(min,v));}
 const NUM_RULES={
-  pump:{count:[1,3,2],pressure:[0.1,30,7],flow:[1,100000,300]},
+  pump:{count:[1,3,2],pressure:[0.1,30,7],flow:[1,100000,300],mrLen:[0,300,8]},
   building:{floors:[1,120,5],floorHeight:[2,10,3.5],targetPressure:[0.5,10,3],prvPressure:[0.5,10,2.5],tankHeight:[0,30,3]}
 };
 function setPump(k,v){
