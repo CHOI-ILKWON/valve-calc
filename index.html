@@ -110,7 +110,7 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
     --border:#c8cdd3;--accent:#0757ba;--accent2:#116329;--warn:#7a5901;
     --hot:#bc4c00;--red:#a40e26;--purple:#6639ba;--text:#1f2328;--text2:#57606a;
   }
-  header,.tabs-bar{display:none!important}
+  header,.tabs-bar,#tabH{display:none!important}
   .print-only{display:block}
   .tab-pane{display:block!important;min-height:auto!important;page-break-after:always}
   body{background:#fff;color:#000}
@@ -137,13 +137,15 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </header>
 <div class="tabs-bar">
-  <button class="tab-btn active" onclick="switchTab(0)">① 계통 설정</button>
-  <button class="tab-btn" onclick="switchTab(1)">② 계통도</button>
-  <button class="tab-btn" onclick="switchTab(2)">③ 밸브 목록</button>
-  <button class="tab-btn" onclick="switchTab(3)">④ 밸브 가이드</button>
+  <button class="tab-btn active" onclick="switchTab(0)">📖 사용법</button>
+  <button class="tab-btn" onclick="switchTab(1)">① 계통 설정</button>
+  <button class="tab-btn" onclick="switchTab(2)">② 계통도</button>
+  <button class="tab-btn" onclick="switchTab(3)">③ 밸브 목록</button>
+  <button class="tab-btn" onclick="switchTab(4)">④ 밸브 가이드</button>
 </div>
 <div id="printHeader" class="print-only" style="padding:16px 16px 0"></div>
-<div class="tab-pane active" id="tab0"><div class="page" id="settingsPanel"></div></div>
+<div class="tab-pane active" id="tabH"><div class="page" id="helpPanel"></div></div>
+<div class="tab-pane" id="tab0"><div class="page" id="settingsPanel"></div></div>
 <div class="tab-pane" id="tab1"><div class="page" id="diagramPanel"></div></div>
 <div class="tab-pane" id="tab2"><div class="page" id="valvePanel"></div></div>
 <div class="tab-pane" id="tab3"><div class="page" id="guidePanel"></div></div>
@@ -298,10 +300,11 @@ function switchTab(i){
   renderTab(i);
 }
 function renderTab(i){
-  if(i===0) renderSettings();
-  if(i===1) renderDiagram();
-  if(i===2) renderValveList();
-  if(i===3) renderGuide();
+  if(i===0) renderHelp();
+  if(i===1) renderSettings();
+  if(i===2) renderDiagram();
+  if(i===3) renderValveList();
+  if(i===4) renderGuide();
 }
 function renderAll(){persist();renderTab(activeTab);}
 
@@ -309,6 +312,48 @@ function renderAll(){persist();renderTab(activeTab);}
 const LS_KEY='valveCalcState_v1';
 function persist(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch{}
+}
+
+// ── Tab 0: Help (사용법) ──────────────────────────────────────────────────────
+function renderHelp(){
+  const step=(n,title,body)=>`<div style="display:flex;gap:12px;margin-bottom:14px">
+    <div style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px">${n}</div>
+    <div><div style="font-weight:700;font-size:13px;margin-bottom:3px">${title}</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7">${body}</div></div>
+  </div>`;
+  let h=`<div class="section">
+    <div class="section-title">이 앱은</div>
+    <div style="font-size:13px;line-height:1.8">
+      급수 계통(상수 인입 → 저수조 → 펌프 → 입상관 → 층별 주관 → 화장실)에 필요한
+      <strong style="color:var(--accent)">밸브의 종류·위치·수량·재질</strong>을 자동 산출하고,
+      <strong style="color:var(--accent)">계통도(P&amp;ID)</strong>와 <strong style="color:var(--accent)">근거 가이드</strong>까지 한 번에 만들어 주는 계산서 도구입니다.<br>
+      발주처 협의 자료, 견적 요청, 신입 교육 자료로 그대로 쓸 수 있습니다.
+    </div>
+  </div>`;
+  h+=`<div class="section"><div class="section-title">작업 순서 — 5분이면 계산서가 나옵니다</div>`;
+  h+=step(1,'급수 방식 선택','<strong>① 계통 설정</strong> 탭에서 부스터펌프식 / 고가수조식 중 선택합니다. 방식에 따라 입력 항목과 계통도가 자동으로 달라집니다.');
+  h+=step(2,'사양 입력','펌프 사양(대수·토출압·관경) 또는 고가수조(저수위 높이), 그리고 건물 층수·층고·적정 급수압을 입력합니다.');
+  h+=step(3,'층별 압력표 확인','자동 계산된 층별 압력에서 <span class="warn-chip">감압필요</span>는 PRV 설치 대상, <span class="bad-chip">압력부족</span>은 펌프 양정(또는 수조 높이) 재검토 대상입니다. 감압비 3:1 초과 경고가 뜨면 2단 감압을 검토하세요.');
+  h+=step(4,'재질 프리셋 확인','기본값 <strong>STS 표준</strong>(소구경 STS 나사식 / 대구경 덕타일주철+STS디스크)이 자동 적용됩니다. 병원 등 고급 사양은 전체 STS로 변경하세요. 선정 근거는 ④ 가이드 첫 카드에 있습니다.');
+  h+=step(5,'입상관 구성','<strong>+ 입상관 추가</strong> → 관경과 담당층을 입력하면 PRV 필요 여부가 자동 판정됩니다. 이어서 층별 주관과 화장실(Zone)을 추가하세요 — 화장실 수만큼 차단 볼밸브가 잡힙니다.');
+  h+=step(6,'계통도 확인','<strong>② 계통도</strong> 탭에서 인입부터 화장실까지 전체 P&amp;ID를 확인합니다. 오른쪽 위 범례를 참고하세요.');
+  h+=step(7,'밸브 목록 · 엑셀','<strong>③ 밸브 목록</strong>에서 설치 위치·규격·재질·구경·수량을 확인하고, <strong>엑셀(CSV)</strong> 버튼으로 발주처 제출용 파일을 내려받습니다.');
+  h+=step(8,'PDF 출력','상단 <strong>🖨 PDF</strong> 버튼 → 인쇄 대화상자에서 "PDF로 저장"을 선택합니다. 설정·계통도·목록·가이드가 밝은 배경 계산서로 출력됩니다.');
+  h+=`</div>`;
+  h+=`<div class="section"><div class="section-title">버튼 안내</div>
+    <table class="floor-table"><tbody>
+    <tr><td style="white-space:nowrap;font-weight:600">💾 저장 / 📂 불러오기</td><td>프로젝트를 JSON 파일로 저장·복원합니다. PC를 바꾸거나 동료에게 넘길 때 사용하세요.</td></tr>
+    <tr><td style="font-weight:600">📊 엑셀</td><td>밸브 목록 + 구경별 집계를 CSV로 내려받아 엑셀에서 바로 엽니다.</td></tr>
+    <tr><td style="font-weight:600">🖨 PDF</td><td>전 탭을 밝은 배경 계산서로 인쇄(PDF 저장)합니다.</td></tr>
+    <tr><td style="font-weight:600">🔄 초기화</td><td>모든 입력을 기본값으로 되돌립니다.</td></tr>
+    <tr><td style="font-weight:600">자동 저장</td><td>입력 내용은 이 브라우저에 자동 저장됩니다 — 새로고침하거나 나중에 다시 열어도 그대로 유지됩니다.</td></tr>
+    </tbody></table></div>`;
+  h+=`<div class="section"><div class="section-title">꼭 알아둘 것</div>
+    <div class="guide-tip" style="margin-top:0"><strong>①</strong> 층별 압력은 정수두만 반영한 값입니다 — 배관 마찰손실은 별도로 검토하세요.</div>
+    <div class="guide-tip"><strong>②</strong> 화장실 안쪽 말단 밸브(소형 수격방지기·전기온수기 밸브·앵글밸브)는 본 산출에 포함되지 않습니다 — ④ 가이드의 '화장실 말단 밸브 체크리스트'에서 챙기세요.</div>
+    <div class="guide-tip"><strong>③</strong> 밸브가 처음이라면 <strong>④ 밸브 가이드</strong>부터 읽어보세요 — 모든 밸브의 작동 원리를 그림과 비유로 설명합니다.</div>
+  </div>`;
+  document.getElementById('helpPanel').innerHTML=h;
 }
 
 // ── Tab 1: Settings ───────────────────────────────────────────────────────────
@@ -1470,6 +1515,7 @@ window.addEventListener('afterprint',()=>{
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.getElementById('projectName').addEventListener('change',function(){S.projectName=this.value;persist();});
+let hadSaved=false;
 try{
   const saved=localStorage.getItem(LS_KEY);
   if(saved){
@@ -1479,14 +1525,17 @@ try{
       if(S.building.tankHeight==null)S.building.tankHeight=3;
       if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
       if(!S.pump.inletPipe)S.pump.inletPipe='50A';
+      if(!S.material)S.material='sts';
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt((g.id||'').slice(1));if(n>mx)mx=n;});
       _id=mx+1;
+      hadSaved=true;
     }
   }
 }catch{}
 document.getElementById('projectName').value=S.projectName||'';
-renderAll();
+// 처음 방문자는 사용법 탭, 작업하던 사용자는 계통 설정 탭으로
+switchTab(hadSaved?1:0);
 </script>
 </body>
 </html>
