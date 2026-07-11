@@ -1004,7 +1004,24 @@ function renderValveList(){
 
 // ── Tab 4: Guide ──────────────────────────────────────────────────────────────
 function renderGuide(){
+  const matLabel={sts:'STS 표준',allsts:'전체 STS(고급)',general:'일반(청동/주철)'}[S.material||'sts'];
+  const rating=(S.system==='booster'&&S.pump.pressure>=10)?'16K':'10K';
   const guides=[
+    {icon:'▣',color:SC.cv,badge:'재질기준',title:'재질·압력등급 선정 기준',
+     body:`<strong style="color:var(--text)">배관 재질</strong><br>
+       · 위생(화장실·세대) 라인: STS304 프레스식 접합이 표준입니다. 과거 백강관(아연도금)은 녹물 문제로 퇴출되었습니다.<br>
+       · 펌프실(기계실): 배관은 동일하게 STS304를 쓰되, 대구경은 그루브드 조인트(빅토릭) 접합이 시공·유지보수에 유리해 널리 쓰입니다.<br><br>
+       <strong style="color:var(--text)">밸브 재질 (본 앱 기본값 'STS 표준' 프리셋 기준)</strong><br>
+       · 소구경(50A 이하): STS304 나사식 — STS 볼밸브 가격이 낮아져 청동보다 많이 씁니다.<br>
+       · 대구경(65A 이상): 몸통 덕타일주철 + 디스크·시트 STS, 플랜지식 — 접수부는 에폭시 코팅이라 위생상 문제 없으며, 전량 STS 대비 경제적입니다.<br>
+       · 펌프 토출 체크밸브: 주철 스모렌스키(스프링 리프트식) — 수격이 적어 펌프 토출 표준. 소구경은 스윙식.<br>
+       · 감압밸브(PRV): 주철 파일럿식.<br>
+       · 전량 STS 밸브는 병원 등 고급 사양에서 적용합니다 — '전체 STS' 프리셋을 선택하세요.<br><br>
+       <strong style="color:var(--text)">압력등급</strong><br>
+       · 기본 10K, 펌프 토출압 10kgf/cm² 이상(고층)이면 16K — 본 앱이 자동 적용합니다.<br><br>
+       <strong style="color:var(--text)">참고</strong><br>
+       · 기계실 대구경 차단용은 게이트밸브 대신 버터플라이밸브(덕타일+STS 디스크, 그루브드/웨이퍼)로 대체하는 추세입니다 — 가볍고 저렴하며 공간을 절약합니다.`,
+     tip:`현재 설정: <strong>${matLabel}</strong> / 압력등급 <strong>${rating}</strong> — ① 계통 설정 탭의 '밸브 재질 사양'에서 변경하면 밸브 목록·엑셀에 자동 반영됩니다.`},
     {icon:'⊞',color:SC.gv,badge:'완전개폐',title:'게이트밸브 (GV)',
      body:`완전 개폐 전용이며 유량 조절에는 사용하지 않습니다.<br>대구경(65A 이상) 메인관과 펌프 주변 배관에 주로 사용합니다.<br>펌프 흡입측에는 유체 저항이 적은 게이트밸브를 사용해야 합니다.`,
      tip:'펌프 흡입측 배관은 유체 저항 최소화가 핵심입니다. 흡입 배관이 길거나 저항이 클수록 공동현상(캐비테이션)이 발생할 수 있습니다.'},
