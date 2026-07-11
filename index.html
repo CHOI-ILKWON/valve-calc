@@ -1003,6 +1003,210 @@ function renderValveList(){
 }
 
 // ── Tab 4: Guide ──────────────────────────────────────────────────────────────
+// 가이드 원리 그림 — TH/SC를 참조하므로 인쇄 시 라이트 팔레트로 자동 전환
+function gwrap(w,h,inner){return `<div style="overflow-x:auto;margin:10px 0"><svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${Math.round(w*1.15)}px;display:block">${inner}</svg></div>`;}
+function garrow(x1,y1,x2,y2,col,w=2){
+  const ang=Math.atan2(y2-y1,x2-x1);
+  const hx=x2-7*Math.cos(ang), hy=y2-7*Math.sin(ang);
+  const pt=a=>`${(x2-11*Math.cos(ang+a)).toFixed(1)},${(y2-11*Math.sin(ang+a)).toFixed(1)}`;
+  return svgLine(x1,y1,hx,hy,col,w)+`<polygon points="${x2},${y2} ${pt(.4)} ${pt(-.4)}" fill="${col}"/>`;
+}
+function gpipe(x,y,w,h=18){return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;}
+
+function gdGV(){
+  let s='';
+  s+=gpipe(15,95,180);
+  s+=garrow(25,104,185,104,SC.cv,2.5);
+  s+=`<rect x="90" y="38" width="30" height="57" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=`<rect x="97" y="46" width="16" height="38" fill="${SC.gv}" opacity=".85"/>`;
+  s+=`<circle cx="105" cy="30" r="8" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=svgText(105,138,'열림 — 판이 위로, 유로 완전 개방',SC.gv,10);
+  s+=gpipe(225,95,180);
+  s+=garrow(235,104,283,104,SC.cv,2.5);
+  s+=`<rect x="300" y="38" width="30" height="57" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=`<rect x="307" y="60" width="16" height="53" fill="${SC.av}" opacity=".85"/>`;
+  s+=`<circle cx="315" cy="30" r="8" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=svgText(345,108,'✕',SC.av,14,'middle','700');
+  s+=svgText(315,138,'닫힘 — 판이 칼처럼 내려와 차단',SC.av,10);
+  return gwrap(420,150,s);
+}
+function gdBV(){
+  let s='';
+  s+=gpipe(15,80,60); s+=gpipe(135,80,60);
+  s+=`<circle cx="105" cy="89" r="30" fill="none" stroke="${SC.bv}" stroke-width="1.5"/>`;
+  s+=`<rect x="80" y="81" width="50" height="16" fill="${SC.cv}" opacity=".5"/>`;
+  s+=garrow(20,89,190,89,SC.cv,2.5);
+  s+=svgLine(105,59,105,42,SC.bv,3); s+=svgLine(105,42,140,42,SC.bv,3);
+  s+=svgText(105,135,'열림 — 레버가 배관과 나란히',SC.gv,10);
+  s+=gpipe(225,80,60); s+=gpipe(345,80,60);
+  s+=`<circle cx="315" cy="89" r="30" fill="none" stroke="${SC.bv}" stroke-width="1.5"/>`;
+  s+=`<rect x="307" y="64" width="16" height="50" fill="${SC.bv}" opacity=".5"/>`;
+  s+=garrow(230,89,278,89,SC.cv,2.5);
+  s+=svgLine(315,59,315,30,SC.bv,3);
+  s+=svgText(315,135,'닫힘 — 90° 돌려 레버가 직각',SC.av,10);
+  return gwrap(420,148,s);
+}
+function gdCV(){
+  let s='';
+  s+=gpipe(15,78,180,24);
+  s+=garrow(25,90,185,90,SC.cv,2.5);
+  s+=`<circle cx="105" cy="82" r="3" fill="${TH.text2}"/>`;
+  s+=svgLine(105,82,132,100,SC.gv,3);
+  s+=svgText(105,130,'정방향 — 물살이 문을 밀어 열림',SC.gv,10);
+  s+=gpipe(225,78,180,24);
+  s+=`<circle cx="315" cy="82" r="3" fill="${TH.text2}"/>`;
+  s+=svgLine(315,82,315,101,SC.av,3);
+  s+=garrow(395,90,330,90,SC.av,2.5);
+  s+=svgText(315,130,'역방향 — 문이 닫혀 역류 차단',SC.av,10);
+  return gwrap(420,142,s);
+}
+function gdLCV(){
+  let s='';
+  s+=gpipe(15,45,140,14);
+  s+=`<circle cx="85" cy="52" r="10" fill="none" stroke="${SC.lcv}" stroke-width="1.5"/>`;
+  s+=svgLine(75,52,95,52,SC.lcv,1.5)+svgLine(85,42,85,62,SC.lcv,1.5);
+  s+=svgText(85,30,'LCV',SC.lcv,9);
+  s+=garrow(25,52,66,52,SC.cv,2);
+  s+=`<rect x="155" y="45" width="170" height="130" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=`<rect x="157" y="120" width="166" height="53" fill="${SC.cv}" opacity=".22"/>`;
+  s+=svgLine(157,120,323,120,SC.cv,1.5);
+  s+=`<line x1="157" y1="75" x2="323" y2="75" stroke="${SC.av}" stroke-width="1" stroke-dasharray="4,3"/>`;
+  s+=svgText(330,79,'만수위 → 닫힘',SC.av,9,'start');
+  s+=svgText(330,124,'수위 낮음 → 열림',SC.gv,9,'start');
+  s+=`<circle cx="240" cy="112" r="8" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>`;
+  s+=svgText(240,98,'볼탭(백업)',SC.gv,8);
+  s+=garrow(168,62,190,100,SC.cv,2);
+  s+=svgText(210,192,'수위가 만수위에 닿으면 LCV가 인입수를 자동 차단',TH.text2,10);
+  return gwrap(420,200,s);
+}
+function gdPRV(){
+  let s='';
+  s+=gpipe(15,95,150,20); s+=gpipe(255,95,150,20);
+  s+=`<polygon points="185,105 210,80 235,105 210,130" fill="${SC.prv}" fill-opacity=".2" stroke="${SC.prv}" stroke-width="1.5"/>`;
+  s+=`<path d="M210,78 l6,-5 l-12,-5 l12,-5 l-12,-5 l6,-5" fill="none" stroke="${SC.prv}" stroke-width="1.5"/>`;
+  s+=svgText(210,42,'조절 스프링',SC.prv,9);
+  s+=garrow(25,105,160,105,SC.av,5);
+  s+=svgText(90,78,'1차압 7.0 (고압)',SC.av,10);
+  s+=garrow(265,105,395,105,SC.cv,2.5);
+  s+=svgText(330,78,'2차압 2.5 (일정)',SC.cv,10);
+  s+=svgText(210,158,'2차압이 오르면 스프링·다이어프램이 밸브를 조여 압력을 일정하게 유지',TH.text2,10);
+  return gwrap(420,168,s);
+}
+function gdGlobe(){
+  let s='';
+  s+=gpipe(15,90,110,20); s+=gpipe(295,90,110,20);
+  s+=`<rect x="125" y="68" width="170" height="62" rx="8" fill="none" stroke="${SC.globe}" stroke-width="1.5"/>`;
+  s+=`<path d="M130,100 C175,100 175,78 210,78 C245,78 245,100 290,100" fill="none" stroke="${SC.cv}" stroke-width="2.5"/>`;
+  s+=garrow(300,100,340,100,SC.cv,2.5);
+  s+=`<rect x="203" y="38" width="14" height="36" fill="${SC.globe}" opacity=".85"/>`;
+  s+=svgLine(210,38,210,28,TH.text2,2);
+  s+=`<circle cx="210" cy="22" r="7" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=svgText(210,152,'디스크를 조금씩 내려 틈새 크기로 유량을 미세 조절',TH.text2,10);
+  return gwrap(420,162,s);
+}
+function gdST(){
+  let s='';
+  s+=gpipe(15,70,390,20);
+  s+=garrow(25,80,130,80,SC.cv,2.5);
+  s+=garrow(300,80,395,80,SC.cv,2.5);
+  s+=svgLine(190,90,230,130,SC.st,1.5);
+  s+=svgLine(240,90,280,130,SC.st,1.5);
+  s+=`<rect x="226" y="130" width="58" height="9" fill="${SC.st}" opacity=".7"/>`;
+  s+=`<line x1="208" y1="100" x2="252" y2="100" stroke="${SC.st}" stroke-width="1.2" stroke-dasharray="3,2"/>`;
+  s+=svgText(180,112,'망(스크린)',SC.st,8,'end');
+  s+=`<circle cx="248" cy="122" r="2.5" fill="${TH.text2}"/><circle cx="256" cy="118" r="2.5" fill="${TH.text2}"/><circle cx="253" cy="126" r="2.5" fill="${TH.text2}"/>`;
+  s+=svgText(300,135,'이물질 → 청소 플러그',TH.text2,8,'start');
+  s+=svgText(210,162,'물은 망을 통과, 이물질은 Y자 주머니에 갇힘 — 플러그 열어 청소',TH.text2,10);
+  return gwrap(420,172,s);
+}
+function gdAV(){
+  let s='';
+  s+=gpipe(60,120,300,20);
+  s+=`<rect x="190" y="60" width="40" height="60" fill="none" stroke="${SC.av}" stroke-width="1.5"/>`;
+  s+=`<rect x="192" y="62" width="36" height="24" fill="${SC.prv}" fill-opacity=".25"/>`;
+  s+=`<circle cx="210" cy="100" r="10" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>`;
+  s+=garrow(210,58,210,34,SC.prv,2);
+  s+=svgText(210,24,'공기 배출',SC.prv,9);
+  s+=`<circle cx="120" cy="128" r="3" fill="none" stroke="${SC.prv}" stroke-width="1.2"/><circle cx="150" cy="125" r="3" fill="none" stroke="${SC.prv}" stroke-width="1.2"/><circle cx="176" cy="129" r="3" fill="none" stroke="${SC.prv}" stroke-width="1.2"/>`;
+  s+=svgText(120,152,'공기 방울이 최고점에 모임',TH.text2,9,'start');
+  s+=svgText(210,172,'공기가 차면 플로트가 내려가 배출구 개방, 물이 차면 떠올라 닫힘',TH.text2,10);
+  return gwrap(420,182,s);
+}
+function gdWH(){
+  let s='';
+  s+=gpipe(15,120,390,20);
+  s+=garrow(25,130,120,130,SC.cv,2.5);
+  s+=garrow(330,130,265,130,SC.av,3.5);
+  s+=svgText(345,134,'수격 충격',SC.av,9,'start');
+  s+=`<rect x="185" y="30" width="50" height="80" rx="14" fill="none" stroke="${SC.wh}" stroke-width="1.5"/>`;
+  s+=`<rect x="188" y="33" width="44" height="30" fill="${SC.prv}" fill-opacity=".25"/>`;
+  s+=`<rect x="188" y="63" width="44" height="8" fill="${TH.text2}"/>`;
+  s+=`<rect x="188" y="71" width="44" height="36" fill="${SC.cv}" fill-opacity=".3"/>`;
+  s+=svgLine(210,110,210,120,TH.text2,2);
+  s+=svgText(180,48,'공기(질소)',SC.prv,8,'end');
+  s+=svgText(180,67,'피스톤',TH.text2,8,'end');
+  s+=svgText(180,90,'물',SC.cv,8,'end');
+  s+=svgText(210,168,'급정거한 물의 충격을 공기 쿠션이 받아냄 — 배관용 에어백',TH.text2,10);
+  return gwrap(420,178,s);
+}
+function gdPT(){
+  let s='';
+  s+=gpipe(15,130,390,20);
+  s+=garrow(25,139,120,139,SC.cv,2.5);
+  s+=`<rect x="250" y="30" width="70" height="90" rx="16" fill="none" stroke="${SC.pg}" stroke-width="1.5"/>`;
+  s+=`<path d="M252,75 Q285,60 318,75" fill="none" stroke="${SC.pg}" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+  s+=svgText(285,52,'질소',SC.prv,9);
+  s+=svgText(285,102,'물',SC.cv,9);
+  s+=svgLine(285,120,285,130,TH.text2,2);
+  s+=svgText(240,52,'다이어프램',SC.pg,8,'end');
+  s+=svgText(210,172,'조금 쓸 때는 탱크가 물을 내줘 펌프가 쉼 — 잦은 기동 방지',TH.text2,10);
+  return gwrap(420,182,s);
+}
+function gdFJ(){
+  let s='';
+  s+=`<circle cx="60" cy="90" r="22" fill="${TH.surface}" stroke="${SC.cv}" stroke-width="2"/>`;
+  s+=svgText(60,94,'P',SC.cv,12,'middle','700');
+  s+=gpipe(82,81,80,18);
+  s+=`<path d="M92,68 q6,-8 12,0 q6,8 12,0 q6,-8 12,0" fill="none" stroke="${SC.av}" stroke-width="1.5"/>`;
+  s+=svgText(115,54,'진동',SC.av,9);
+  s+=`<path d="M162,90 q8,-14 16,0 q8,14 16,0 q8,-14 16,0 q8,14 16,0 q8,-14 16,0 q8,14 16,0" fill="none" stroke="${SC.fj}" stroke-width="2"/>`;
+  s+=svgText(210,120,'벨로우즈',SC.fj,9);
+  s+=gpipe(258,81,140,18);
+  s+=svgText(330,68,'진동 없음',SC.gv,9);
+  s+=svgText(210,148,'주름관이 펌프의 떨림을 흡수해 건물로 가는 소음·진동 차단',TH.text2,10);
+  return gwrap(420,158,s);
+}
+function gdEX(){
+  let s='';
+  s+=gpipe(15,80,150,18);
+  s+=`<path d="M165,89 q7,-13 14,0 q7,13 14,0 q7,-13 14,0 q7,13 14,0" fill="none" stroke="${SC.ex}" stroke-width="2"/>`;
+  s+=gpipe(221,80,184,18);
+  s+=garrow(115,58,172,58,SC.av,2);
+  s+=svgText(90,62,'늘어남',SC.av,9,'end');
+  s+=garrow(272,58,214,58,SC.av,2);
+  s+=svgText(210,130,'온도로 배관이 늘어난 만큼 주름부가 접히며 흡수 — 아코디언 원리',TH.text2,10);
+  return gwrap(420,140,s);
+}
+function gdWC(){
+  let s='';
+  s+=svgLine(40,30,40,110,SC.cv,4);
+  s+=svgText(40,20,'입상관',TH.text2,9);
+  s+=svgLine(40,60,375,60,SC.cv,2.5);
+  s+=`<rect x="66" y="48" width="26" height="24" fill="none" stroke="${SC.bv}" stroke-width="1.5"/>`;
+  s+=svgText(79,64,'BV',SC.bv,9);
+  s+=svgLine(150,60,150,88,SC.cv,1.5);
+  s+=svgLine(240,60,240,88,SC.cv,1.5);
+  s+=`<rect x="118" y="88" width="64" height="26" fill="none" stroke="${TH.text2}" stroke-width="1.2"/>`;
+  s+=svgText(150,105,'세면기',TH.text2,9);
+  s+=`<rect x="208" y="88" width="64" height="26" fill="none" stroke="${SC.globe}" stroke-width="1.2"/>`;
+  s+=svgText(240,105,'대변기(세정)',SC.globe,8);
+  s+=svgLine(355,58,355,36,SC.prv,2);
+  s+=`<rect x="333" y="12" width="44" height="24" rx="8" fill="none" stroke="${SC.prv}" stroke-width="1.5"/>`;
+  s+=svgText(355,28,'WHA',SC.prv,9);
+  s+=svgText(210,140,'세정밸브 화장실은 분기의 막다른 끝에 WHA 수직 설치',TH.text2,10);
+  return gwrap(420,150,s);
+}
+
 function renderGuide(){
   const matLabel={sts:'STS 표준',allsts:'전체 STS(고급)',general:'일반(청동/주철)'}[S.material||'sts'];
   const rating=(S.system==='booster'&&S.pump.pressure>=10)?'16K':'10K';
@@ -1022,34 +1226,34 @@ function renderGuide(){
        <strong style="color:var(--text)">참고</strong><br>
        · 기계실 대구경 차단용은 게이트밸브 대신 버터플라이밸브(덕타일+STS 디스크, 그루브드/웨이퍼)로 대체하는 추세입니다 — 가볍고 저렴하며 공간을 절약합니다.`,
      tip:`현재 설정: <strong>${matLabel}</strong> / 압력등급 <strong>${rating}</strong> — ① 계통 설정 탭의 '밸브 재질 사양'에서 변경하면 밸브 목록·엑셀에 자동 반영됩니다.`},
-    {icon:'⊞',color:SC.gv,badge:'완전개폐',title:'게이트밸브 (GV)',
-     body:`완전 개폐 전용이며 유량 조절에는 사용하지 않습니다.<br>대구경(65A 이상) 메인관과 펌프 주변 배관에 주로 사용합니다.<br>펌프 흡입측에는 유체 저항이 적은 게이트밸브를 사용해야 합니다.`,
+    {icon:'⊞',color:SC.gv,badge:'완전개폐',title:'게이트밸브 (GV)',svg:gdGV(),
+     body:`<strong>원리</strong> : 칼처럼 생긴 판(게이트)이 위아래로 오르내리며 유로를 열고 닫습니다.<br>완전 개폐 전용이며 유량 조절에는 사용하지 않습니다 — 반쯤 열면 판이 물살에 떨려 소음·마모가 생깁니다.<br>대구경(65A 이상) 메인관과 펌프 주변 배관에 주로 사용합니다.<br>펌프 흡입측에는 유체 저항이 적은 게이트밸브를 사용해야 합니다.`,
      tip:'펌프 흡입측 배관은 유체 저항 최소화가 핵심입니다. 흡입 배관이 길거나 저항이 클수록 공동현상(캐비테이션)이 발생할 수 있습니다.'},
-    {icon:'●',color:SC.bv,badge:'Zone분기',title:'볼밸브 (BV)',
-     body:`90° 회전으로 빠른 개폐가 가능합니다.<br>소구경(15A~100A) Zone 분기 및 세대 입구 차단밸브로 표준 사용됩니다.<br>완전 개방 시 유체 저항이 거의 없습니다.`,
+    {icon:'●',color:SC.bv,badge:'Zone분기',title:'볼밸브 (BV)',svg:gdBV(),
+     body:`<strong>원리</strong> : 구멍 뚫린 공이 90° 돌아가며 구멍을 유로에 맞추면 열림, 돌려 막으면 닫힘입니다.<br>레버 방향만 봐도 개폐 상태를 즉시 알 수 있어 긴급 차단에 유리합니다.<br>소구경(15A~100A) Zone 분기 및 세대 입구 차단밸브로 표준 사용됩니다.<br>완전 개방 시 유체 저항이 거의 없습니다.`,
      tip:'Zone 분기 차단밸브의 표준입니다. 빠른 긴급 차단이 필요한 위치에 적합합니다.'},
-    {icon:'→',color:SC.cv,badge:'역류방지',title:'체크밸브 (CV)',
-     body:`역류를 방지하고 한 방향만 흐름을 허용합니다.<br>펌프 토출측에 반드시 설치하며, 설치 순서는 펌프→플렉시블→체크밸브→게이트밸브 순입니다(게이트를 닫고 체크밸브 정비 가능).<br>수평 배관: 스윙형, 수직 배관: 리프트형을 사용합니다.`,
+    {icon:'→',color:SC.cv,badge:'역류방지',title:'체크밸브 (CV)',svg:gdCV(),
+     body:`<strong>원리</strong> : 한쪽으로만 열리는 문 — 정방향 물살은 문을 밀고 지나가고, 거꾸로 흐르려 하면 문이 닫힙니다. 전기도 조작도 필요 없습니다.<br>펌프 토출측에 반드시 설치하며, 설치 순서는 펌프→플렉시블→체크밸브→게이트밸브 순입니다(게이트를 닫고 체크밸브 정비 가능).<br>수평 배관: 스윙형, 수직 배관: 리프트형을 사용합니다.`,
      tip:'펌프 정지 시 역류에 의한 수격(워터해머)을 방지합니다. 토출측 체크밸브는 펌프 임펠러 보호에도 중요합니다.'},
-    {icon:'⊕',color:SC.lcv,badge:'수위제어',title:'수위조절밸브 (LCV/정수위밸브)',
-     body:`저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, 점검·교체용 바이패스 배관(게이트밸브 2개)을 함께 설치합니다.`,
+    {icon:'⊕',color:SC.lcv,badge:'수위제어',title:'수위조절밸브 (LCV/정수위밸브)',svg:gdLCV(),
+     body:`<strong>원리</strong> : 변기 물탱크와 같은 원리 — 수위가 만수위에 닿으면 볼탭·파일럿의 신호로 상수 인입 밸브가 스스로 닫힙니다.<br>저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, 점검·교체용 바이패스 배관(게이트밸브 2개)을 함께 설치합니다.`,
      tip:'LCV 고장은 저수조 월류(넘침) 사고로 직결됩니다. 볼탭 백업과 오버플로우관 상태를 정기 점검하세요.'},
-    {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',
-     body:`1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치하며, 반드시 바이패스 배관을 함께 설치합니다.<br>전후 게이트밸브 + 바이패스 글로브밸브를 세트로 구성합니다.`,
+    {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',svg:gdPRV(),
+     body:`<strong>원리</strong> : 스프링과 다이어프램의 힘겨루기 — 2차측 압력이 스프링 설정값보다 오르면 밸브가 조여지고, 낮아지면 열려서 2차압이 항상 일정하게 유지됩니다.<br>1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치하며, 반드시 바이패스 배관을 함께 설치합니다.<br>전후 게이트밸브 + 바이패스 글로브밸브를 세트로 구성합니다.`,
      tip:`설정압(현재 ${S.building.prvPressure}kgf/cm²)은 적정 급수압(${S.building.targetPressure}kgf/cm²) 이하로 설정합니다. 감압비가 3:1을 초과하면 소음·캐비테이션 우려가 있어 2단 감압을 검토하세요. 바이패스는 PRV 점검·교체 시 단수 없이 급수 유지를 위한 것입니다.`},
-    {icon:'○',color:SC.globe,badge:'유량조절',title:'글로브밸브',
-     body:`유량의 미세 조절이 가능합니다.<br>감압밸브 바이패스 배관에서 수동 압력 조절용으로 사용합니다.<br>유체 저항이 커서 메인 배관에는 사용하지 않습니다.`,
+    {icon:'○',color:SC.globe,badge:'유량조절',title:'글로브밸브',svg:gdGlobe(),
+     body:`<strong>원리</strong> : 수도꼭지와 같은 구조 — 핸들을 돌려 디스크를 조금씩 내리면 틈새 크기가 변하며 유량이 조절됩니다.<br>유량의 미세 조절이 가능합니다.<br>감압밸브 바이패스 배관에서 수동 압력 조절용으로 사용합니다.<br>유체 저항이 커서 메인 배관에는 사용하지 않습니다.`,
      tip:'바이패스 운전 시 서서히 열어 하류 압력을 확인하면서 조절하세요. 급격한 개방은 하류 배관에 충격을 줄 수 있습니다.'},
-    {icon:'Y',color:SC.st,badge:'이물질포집',title:'Y형 스트레이너 (ST)',
-     body:`이물질을 포집하여 펌프 임펠러와 밸브 시트를 보호합니다.<br>펌프 흡입측 직전에 반드시 설치합니다.<br>정기적인 청소(플러싱)가 필요합니다.`,
+    {icon:'Y',color:SC.st,badge:'이물질포집',title:'Y형 스트레이너 (ST)',svg:gdST(),
+     body:`<strong>원리</strong> : 배관 속의 체(거름망) — 물은 망을 통과시키고, 모래·쇳가루 같은 이물질은 Y자 주머니에 가둡니다.<br>이물질을 포집하여 펌프 임펠러와 밸브 시트를 보호합니다.<br>펌프 흡입측 직전에 반드시 설치합니다.<br>정기적인 청소(플러싱)가 필요합니다.`,
      tip:'청소구 방향이 아래를 향하도록 설치해야 청소가 용이합니다. 이물질 누적 시 흡입 저항 증가로 펌프 효율이 저하됩니다.'},
-    {icon:'↑',color:SC.av,badge:'공기배출',title:'공기빼기밸브 (AV)',
-     body:`배관 내 공기를 자동으로 배출합니다.<br>메인관 최고점 및 각 계통 최상부에 설치합니다.<br>자동식(플로트형)을 사용하여 공기 고임을 방지합니다.`,
+    {icon:'↑',color:SC.av,badge:'공기배출',title:'공기빼기밸브 (AV)',svg:gdAV(),
+     body:`<strong>원리</strong> : 챔버에 공기가 차면 물에 떠 있던 플로트가 내려가 배출구가 열리고, 물이 다시 차오르면 플로트가 떠올라 닫힙니다.<br>배관 내 공기를 자동으로 배출합니다.<br>메인관 최고점 및 각 계통 최상부에 설치합니다.<br>자동식(플로트형)을 사용하여 공기 고임을 방지합니다.`,
      tip:'공기 고임은 유량 감소, 이상 소음, 배관 부식의 원인입니다. 공기빼기밸브 설치 위치가 배관 최고점인지 반드시 확인하세요.'},
-    {icon:'⌁',color:SC.wh,badge:'수격흡수',title:'수격방지기 (WH)',
-     body:`펌프 기동·정지 시 발생하는 수격(워터해머)을 흡수합니다.<br>펌프 토출 헤더에 설치합니다.<br>내부 질소 가스로 충격을 완충합니다.<br>※ 기구용 소형 수격방지기(WHA)는 이것과 별개입니다 — 세정밸브식 화장실의 급수 분기 말단마다 설치하며, 아래 '화장실 말단 밸브 체크리스트' 참조.`,
+    {icon:'⌁',color:SC.wh,badge:'수격흡수',title:'수격방지기 (WH)',svg:gdWH(),
+     body:`<strong>원리</strong> : 배관용 에어백 — 물은 압축되지 않아 급정거하면 압력이 튀는데, 캡슐 속 공기가 피스톤 너머에서 눌리며 그 충격을 대신 먹어줍니다.<br>펌프 기동·정지 시 발생하는 수격(워터해머)을 흡수합니다.<br>펌프 토출 헤더에 설치합니다.<br>내부 질소 가스로 충격을 완충합니다.<br>※ 기구용 소형 수격방지기(WHA)는 이것과 별개입니다 — 세정밸브식 화장실의 급수 분기 말단마다 설치하며, 아래 '화장실 말단 밸브 체크리스트' 참조.`,
      tip:'1~2년마다 질소 재충전이 필요합니다. 충전 압력이 낮아지면 수격 흡수 성능이 저하됩니다.'},
-    {icon:'✓',color:SC.prv,badge:'체크리스트',title:'화장실 말단 밸브 체크리스트',
+    {icon:'✓',color:SC.prv,badge:'체크리스트',title:'화장실 말단 밸브 체크리스트',svg:gdWC(),
      body:`화장실 세부(기구 구성·온수기 유무)가 정해진 뒤 챙기는 항목들입니다. <strong style="color:var(--warn)">본 앱의 수량 산출에는 포함되지 않으므로</strong> 실시설계·발주 시 빠뜨리지 마세요.<br><br>
        <strong style="color:var(--text)">① 소형 수격방지기(WHA)</strong><br>
        · 세정밸브(플러시밸브)·전자밸브식 화장실의 급수 분기 말단마다 1개.<br>
@@ -1067,14 +1271,14 @@ function renderGuide(){
        · 호스를 접속하는 청소 수전에는 진공브레이커 부착형을 사용합니다.<br>
        · 배관이 음압이 될 때 구정물이 급수관으로 빨려 들어가는 역사이펀 오염을 방지합니다.`,
      tip:'기구 구성(세정밸브식 여부, 온수기 유무, 기구 수)은 위생기구 설계에서 정해지므로, 이 항목들의 자동 수량 산출은 급수앱(위생배관 관경 계산)에 기구 기반으로 추가하는 것이 정확합니다 — 추후 연동 시 반영 예정.'},
-    {icon:'◍',color:SC.pg,badge:'압력안정',title:'압력탱크 (PT)',
-     body:`토출 헤더에 설치하여 소유량 사용 시 펌프의 빈번한 기동·정지를 방지합니다.<br>다이어프램(질소 충전)식이 표준입니다.<br>인버터 부스터펌프에도 소형 압력탱크는 기본 구성입니다.`,
+    {icon:'◍',color:SC.pg,badge:'압력안정',title:'압력탱크 (PT)',svg:gdPT(),
+     body:`<strong>원리</strong> : 물 저금통 — 조금 쓸 때는 탱크가 저장한 물을 내주고, 펌프는 모아서 한 번에 채웁니다. 다이어프램 위 질소가 눌렸다 펴지며 압력을 유지합니다.<br>토출 헤더에 설치하여 소유량 사용 시 펌프의 빈번한 기동·정지를 방지합니다.<br>다이어프램(질소 충전)식이 표준입니다.<br>인버터 부스터펌프에도 소형 압력탱크는 기본 구성입니다.`,
      tip:'충전압은 펌프 기동압보다 약 0.2kgf/cm² 낮게 설정합니다. 다이어프램 파손 시 펌프가 헌팅(짧은 주기 반복 기동)합니다.'},
-    {icon:'≈',color:SC.fj,badge:'진동차단',title:'플렉시블조인트 (FJ)',
-     body:`펌프 진동과 소음의 건물 구조 전달을 차단합니다.<br>펌프 흡입·토출 연결부 양쪽에 각 1개씩 설치합니다.<br>고온 배관에는 스테인리스 벨로우즈 타입을 사용합니다.`,
+    {icon:'≈',color:SC.fj,badge:'진동차단',title:'플렉시블조인트 (FJ)',svg:gdFJ(),
+     body:`<strong>원리</strong> : 배관 중간의 주름관(벨로우즈)이 펌프의 떨림을 그 자리에서 흡수해 뒤쪽 배관으로 전달하지 않습니다.<br>펌프 진동과 소음의 건물 구조 전달을 차단합니다.<br>펌프 흡입·토출 연결부 양쪽에 각 1개씩 설치합니다.<br>고온 배관에는 스테인리스 벨로우즈 타입을 사용합니다.`,
      tip:'설치 방향을 반드시 확인하세요. 잘못된 방향은 진동 차단 효과가 없습니다. 고압 배관에서는 내압 사양을 확인하세요.'},
-    {icon:'~',color:SC.ex,badge:'열팽창흡수',title:'신축이음 (EX)',
-     body:`배관의 열팽창 및 수축을 흡수합니다.<br>수직관 3층마다 1개씩 설치합니다 (총 ${Math.ceil(S.building.floors/3)}개).<br>벨로우즈형이 일반적이며, 급탕관에는 더 자주 설치합니다.`,
+    {icon:'~',color:SC.ex,badge:'열팽창흡수',title:'신축이음 (EX)',svg:gdEX(),
+     body:`<strong>원리</strong> : 아코디언 주름 — 배관이 온도로 늘어나고 줄어드는 만큼 주름부가 접혔다 펴지며 받아줍니다.<br>배관의 열팽창 및 수축을 흡수합니다.<br>수직관 3층마다 1개씩 설치합니다 (총 ${Math.ceil(S.building.floors/3)}개).<br>벨로우즈형이 일반적이며, 급탕관에는 더 자주 설치합니다.`,
      tip:`본 건물(${S.building.floors}층)의 신축이음은 ${Math.ceil(S.building.floors/3)}개가 필요합니다. 설치 위치는 고정 브래킷과 가이드 서포트를 함께 고려해야 합니다.`},
   ];
 
@@ -1090,6 +1294,7 @@ function renderGuide(){
         <span class="ml" style="color:var(--text2);font-size:12px">▼</span>
       </div>
       <div class="guide-body">
+        ${g.svg||''}
         <p>${g.body}</p>
         <div class="guide-tip"><strong>실무 팁 :</strong> ${g.tip}</div>
       </div>
