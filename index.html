@@ -69,6 +69,7 @@ select:focus{outline:none;border-color:var(--accent)}
 .vscard-name{font-size:11px;color:var(--text2);margin-bottom:6px}
 .vscard-count{font-size:26px;font-weight:700}
 .vscard-unit{font-size:11px;color:var(--text2)}
+.vscard-detail{font-size:10px;color:var(--text2);margin-top:7px;padding-top:6px;border-top:1px solid var(--border);line-height:1.6;word-break:keep-all}
 table.vlist{width:100%;border-collapse:collapse;font-size:12px}
 table.vlist th{background:var(--surface3);padding:8px 10px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)}
 table.vlist td{padding:7px 10px;border-bottom:1px solid var(--border)}
@@ -902,15 +903,26 @@ function renderValveList(){
     h+=`</div>`;
   }
 
+  // 품목별 → 구경별 세부 수량 집계
+  const byPipe={};
+  for(const item of list){
+    const m=byPipe[item.name]=byPipe[item.name]||{};
+    m[item.pipe]=(m[item.pipe]||0)+item.qty;
+  }
+
   // Summary cards
   h+=`<div class="valve-summary-grid">`;
   for(const [name,qty] of Object.entries(summary)){
     if(!qty) continue;
     const col=COLORS[name]||'#8b949e';
+    const detail=Object.keys(byPipe[name]||{})
+      .sort((a,b)=>PIPES.indexOf(a)-PIPES.indexOf(b))
+      .map(p=>`${p}×${byPipe[name][p]}`).join(' · ');
     h+=`<div class="vscard">
       <div class="vscard-name" style="color:${col}">${name}</div>
       <div class="vscard-count" style="color:${col}">${qty}</div>
       <div class="vscard-unit">개</div>
+      ${detail?`<div class="vscard-detail">${detail}</div>`:''}
     </div>`;
   }
   h+=`</div>`;
