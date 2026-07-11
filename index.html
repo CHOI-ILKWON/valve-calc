@@ -162,7 +162,8 @@ const S={
   projectName:'새 프로젝트',
   system:'booster',
   material:'sts',
-  pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A'},
+  mr:{inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'},
+  pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8},
   building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3},
   groups:[]
 };
@@ -226,6 +227,28 @@ function groupFriction(g){
   else if(g.prv) endP=B.prvPressure-(hi-1)*B.floorHeight*0.1-hf/10;
   else endP=P.pressure-(hi-1)*B.floorHeight*0.1-(hf+hfMr)/10;
   return {Q,hi,Lv,Lh,Le,Lfit,hf:hf/10,hfMr:hfMr/10,endP};
+}
+
+// ── 기계실 물량 (개산) — TP: 감압밸브 세트 출구까지 ─────────────────────────
+function calcMR(){
+  const P=S.pump, M=S.mr||{};
+  const isBst=S.system==='booster';
+  const segs=[];
+  const inletLen=+M.inletLen||0, pumpLen=isBst?(+M.pumpLen||0):0, mainLen=+P.mrLen||0;
+  if(inletLen) segs.push({name:'수도 인입관',pipe:P.inletPipe||'50A',len:inletLen});
+  if(pumpLen) segs.push({name:'펌프 흡입·토출 배관',pipe:P.pumpPipe||'65A',len:pumpLen});
+  if(mainLen) segs.push({name:isBst?'토출 헤더·메인(분기까지)':'수조 출구·메인(분기까지)',pipe:P.mainPipe,len:mainLen});
+  const eK=+M.elbowK||0, tK=+M.teeK||0;
+  const items=segs.map(s=>({...s,elbow:Math.ceil(s.len*eK),tee:Math.ceil(s.len*tK)}));
+  return {items,reducer:isBst?P.count*2:0,eK,tK,insul:M.insul||'고무발포 25T'};
+}
+function pipeSpecLabel(){
+  return S.material==='general'?'아연도강관(KS D 3507)':'STS304 (KS D 3576)';
+}
+function setMR(k,v){
+  if(!S.mr)S.mr={};
+  if(k!=='insul'){v=+v;if(!isFinite(v)||v<0)v=0;}
+  S.mr[k]=v;renderAll();
 }
 
 // ── 재질/등급 자동 산정 ─────────────────────────────────────────────────────
@@ -631,10 +654,49 @@ function renderSettings(){
     }
     h+=`</tbody></table>
     <div style="font-size:11px;color:var(--text2);margin-top:8px">
+      ※ 수평길이 = 입상관 분기에서 <strong>최상층의 가장 먼 화장실</strong>까지 수평 구간 합계(최불리 경로). 입상관마다 각자의 최원 경로를 입력하세요.<br>
       ※ 수직길이는 담당층(미입력 시 최고층)×층고로 자동. 밸브 상당길이는 경로상 밸브(분기·층주관·화장실 볼밸브, PRV 전 게이트×2·스트레이너)를 L/D 환산해 자동 반영, 엘보·티는 직관장의 20% 개산.<br>
       ※ 말단 예상압 = 시작압 − 최고층 정수두 − 마찰손실. PRV 입상관은 2차 설정압(분기부 설치 가정) 기준${S.system==='booster'?', 비PRV 입상관은 펌프 토출압 기준(기계실 구간 손실 포함)':''}. 최소 필요압 ${MIN_PRESSURE}kgf/cm²(세정밸브 1.0).
     </div></div>`;
   }
+
+  // 기계실 물량 (개산)
+  const M=S.mr||{};
+  h+=`<div class="section"><div class="section-title">기계실 물량 입력 (개산) — TP: 감압밸브 세트 출구까지</div>
+    <div class="form-row">
+      <span class="form-label">수도 인입관 길이 (m)</span>
+      <input class="form-inp sm" type="number" min="0" value="${M.inletLen??10}" onchange="setMR('inletLen',this.value)">
+    </div>`;
+  if(S.system==='booster'){
+    h+=`<div class="form-row">
+      <span class="form-label">펌프 주변 배관 (m)</span>
+      <input class="form-inp sm" type="number" min="0" value="${M.pumpLen??12}" onchange="setMR('pumpLen',this.value)">
+      <span style="font-size:11px;color:var(--text2)">흡입·토출 합계 (펌프 1대당 약 6m 기준)</span>
+    </div>`;
+  }
+  h+=`<div class="form-row">
+      <span class="form-label">메인·헤더 길이 (m)</span>
+      <span style="font-size:13px;font-weight:600">${P.mrLen??8} m</span>
+      <span style="font-size:11px;color:var(--text2)">위 '마찰손실 검토'의 기계실 배관 길이와 공용</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">엘보 개산 계수 (개/m)</span>
+      <input class="form-inp sm" type="number" step="0.05" min="0" value="${M.elbowK??0.4}" onchange="setMR('elbowK',this.value)">
+      <span class="form-label" style="width:auto">티 계수 (개/m)</span>
+      <input class="form-inp sm" type="number" step="0.05" min="0" value="${M.teeK??0.15}" onchange="setMR('teeK',this.value)">
+    </div>
+    <div class="form-row">
+      <span class="form-label">보온재</span>
+      <select onchange="setMR('insul',this.value)">
+        ${['고무발포 25T','고무발포 19T','유리면 50T','보온 없음'].map(o=>`<option${o===(M.insul||'고무발포 25T')?' selected':''}>${o}</option>`).join('')}
+      </select>
+      <span style="font-size:11px;color:var(--text2)">결로방지 보온 — 배관 길이에서 자동 산출</span>
+    </div>
+    <div style="font-size:11px;color:var(--text2)">
+      ※ 부속(엘보·티)은 개산율 방식 — 기계실은 배관 밀도가 높아 평면 카운트보다 개산이 실제에 가깝습니다. 계수는 사무소 기준에 맞게 조정하세요.<br>
+      ※ 산출 결과는 ③ 밸브 목록 하단과 엑셀(CSV)에 포함됩니다.
+    </div>
+  </div>`;
 
   document.getElementById('settingsPanel').innerHTML=h;
 }
@@ -1122,6 +1184,35 @@ function renderValveList(){
     </tr>`;
   }
   h+=`</tbody></table></div>`;
+
+  // 기계실 물량 (개산)
+  const mr=calcMR();
+  if(mr.items.length){
+    const spec=pipeSpecLabel();
+    const doInsul=mr.insul!=='보온 없음';
+    h+=`<div class="section"><div class="section-title">기계실 물량 (개산) — TP: 감압밸브 세트 출구까지</div>
+      <table class="vlist"><thead><tr>
+        <th>구분</th><th>품명</th><th>규격</th><th>구경</th><th>수량</th><th>단위</th><th>비고</th>
+      </tr></thead><tbody>`;
+    for(const it of mr.items){
+      h+=`<tr><td>배관</td><td>강관</td><td>${esc(spec)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.len}</td><td>m</td><td style="color:var(--text2)">${esc(it.name)}</td></tr>`;
+    }
+    for(const it of mr.items){
+      if(it.elbow) h+=`<tr><td>부속</td><td>엘보 90°</td><td>${esc(spec)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.elbow}</td><td>개</td><td style="color:var(--text2)">${it.len}m × ${mr.eK}개/m 개산</td></tr>`;
+    }
+    for(const it of mr.items){
+      if(it.tee) h+=`<tr><td>부속</td><td>티</td><td>${esc(spec)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.tee}</td><td>개</td><td style="color:var(--text2)">${it.len}m × ${mr.tK}개/m 개산</td></tr>`;
+    }
+    if(mr.reducer) h+=`<tr><td>부속</td><td>레듀서</td><td>${esc(spec)}</td><td>${esc(S.pump.pumpPipe||'65A')}</td><td style="font-weight:700">${mr.reducer}</td><td>개</td><td style="color:var(--text2)">펌프 접속부 ×2/대</td></tr>`;
+    if(doInsul){
+      for(const it of mr.items){
+        h+=`<tr><td>보온</td><td>배관 보온</td><td>${esc(mr.insul)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.len}</td><td>m</td><td style="color:var(--text2)">결로방지 — ${esc(it.name)}</td></tr>`;
+      }
+    }
+    h+=`</tbody></table>
+    <div style="font-size:11px;color:var(--text2);margin-top:8px">※ 부속은 개산율 방식(계수는 ① 계통 설정에서 조정). 정산 단계에는 시공도 기준 상세 카운트로 대체하세요.</div>
+    </div>`;
+  }
   document.getElementById('valvePanel').innerHTML=h;
 }
 
@@ -1447,6 +1538,19 @@ function exportCSV(){
   rows.push([]);
   rows.push(['No.','설치 위치','기기명','규격','재질/등급','구경','수량','비고']);
   for(const i of list) rows.push([i.no,i.pos,i.name,i.spec,i.mat||'',i.pipe,i.qty,i.note]);
+  // 기계실 물량 (개산)
+  const mr=calcMR();
+  if(mr.items.length){
+    const spec=pipeSpecLabel();
+    rows.push([]);
+    rows.push(['[기계실 물량(개산)]','품명','규격','구경','수량','단위','비고']);
+    for(const it of mr.items) rows.push(['배관','강관',spec,it.pipe,it.len,'m',it.name]);
+    for(const it of mr.items) if(it.elbow) rows.push(['부속','엘보 90°',spec,it.pipe,it.elbow,'개',`${it.len}m×${mr.eK}개/m 개산`]);
+    for(const it of mr.items) if(it.tee) rows.push(['부속','티',spec,it.pipe,it.tee,'개',`${it.len}m×${mr.tK}개/m 개산`]);
+    if(mr.reducer) rows.push(['부속','레듀서',spec,S.pump.pumpPipe||'65A',mr.reducer,'개','펌프 접속부 ×2/대']);
+    if(mr.insul!=='보온 없음') for(const it of mr.items) rows.push(['보온','배관 보온',mr.insul,it.pipe,it.len,'m','결로방지 — '+it.name]);
+  }
+
   rows.push([]);
   rows.push(['[집계]','기기명','수량 합계','구경별']);
   const byPipe={};
@@ -1520,7 +1624,8 @@ function setFloorPipeProp(gid,idx,k,v){
 function resetAll(){
   if(!confirm('모든 설정을 초기화하시겠습니까?')) return;
   S.projectName='새 프로젝트'; S.system='booster'; S.material='sts';
-  S.pump={count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A'};
+  S.mr={inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+  S.pump={count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8};
   S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3};
   S.groups=[]; _id=1;
   try{localStorage.removeItem(LS_KEY);}catch{}
@@ -1547,6 +1652,8 @@ function loadJSON(e){
       if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
       if(!S.pump.inletPipe)S.pump.inletPipe='50A';
       if(!S.material)S.material='sts';
+      if(!S.mr)S.mr={inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+      if(S.pump.mrLen==null)S.pump.mrLen=8;
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt(g.id?.slice(1));if(n>mx)mx=n;});
       _id=mx+1;
@@ -1604,6 +1711,8 @@ try{
       if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
       if(!S.pump.inletPipe)S.pump.inletPipe='50A';
       if(!S.material)S.material='sts';
+      if(!S.mr)S.mr={inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+      if(S.pump.mrLen==null)S.pump.mrLen=8;
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt((g.id||'').slice(1));if(n>mx)mx=n;});
       _id=mx+1;
