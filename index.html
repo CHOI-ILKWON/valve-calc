@@ -162,7 +162,7 @@ const S={
   projectName:'새 프로젝트',
   system:'booster',
   material:'sts',
-  mr:{inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'},
+  mr:mrDefaults(),
   pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8},
   building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3},
   groups:[]
@@ -230,14 +230,29 @@ function groupFriction(g){
 }
 
 // ── 기계실 물량 (개산) — TP: 감압밸브 세트 출구까지 ─────────────────────────
+function mrDefaults(){
+  return {inletLen:10,lcvBypLen:3,suctionLen:4,dischargeLen:4,emerBypLen:6,prvSetLen:2,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+}
 function calcMR(){
   const P=S.pump, M=S.mr||{};
   const isBst=S.system==='booster';
   const segs=[];
-  const inletLen=+M.inletLen||0, pumpLen=isBst?(+M.pumpLen||0):0, mainLen=+P.mrLen||0;
-  if(inletLen) segs.push({name:'수도 인입관',pipe:P.inletPipe||'50A',len:inletLen});
-  if(pumpLen) segs.push({name:'펌프 흡입·토출 배관',pipe:P.pumpPipe||'65A',len:pumpLen});
-  if(mainLen) segs.push({name:isBst?'토출 헤더·메인(분기까지)':'수조 출구·메인(분기까지)',pipe:P.mainPipe,len:mainLen});
+  const add=(name,pipe,len,note='')=>{if(len>0)segs.push({name,pipe,len:Math.round(len*10)/10,note});};
+  add('수도 인입관',P.inletPipe||'50A',+M.inletLen||0);
+  if(isBst){
+    add('LCV 바이패스',P.inletPipe||'50A',+M.lcvBypLen||0,'평상시 닫힘');
+    add('펌프 흡입 배관',P.pumpPipe||'65A',(+M.suctionLen||0)*P.count,`${M.suctionLen}m × ${P.count}대`);
+    add('펌프 토출 배관',P.pumpPipe||'65A',(+M.dischargeLen||0)*P.count,`${M.dischargeLen}m × ${P.count}대`);
+    add('토출 헤더·메인(분기까지)',P.mainPipe,+P.mrLen||0);
+    add('비상 바이패스(시수직결)',P.inletPipe||'50A',+M.emerBypLen||0,'평상시 닫힘');
+  } else {
+    add('수조 출구·메인(분기까지)',P.mainPipe,+P.mrLen||0);
+  }
+  // PRV 세트 배관 — 구경별 집계
+  const prvByPipe={};
+  for(const g of S.groups) if(g.prv) prvByPipe[g.pipe]=(prvByPipe[g.pipe]||0)+1;
+  for(const [pipe,n] of Object.entries(prvByPipe))
+    add('PRV 세트 배관',pipe,(+M.prvSetLen||0)*n,`${M.prvSetLen}m × ${n}개소`);
   const eK=+M.elbowK||0, tK=+M.teeK||0;
   const items=segs.map(s=>({...s,elbow:Math.ceil(s.len*eK),tee:Math.ceil(s.len*tK)}));
   return {items,reducer:isBst?P.count*2:0,eK,tK,insul:M.insul||'고무발포 25T'};
@@ -660,26 +675,50 @@ function renderSettings(){
     </div></div>`;
   }
 
-  // 기계실 물량 (개산)
+  // 기계실 물량 (개산) — 구간별 입력, 대수·개소는 자동 곱
   const M=S.mr||{};
+  const nPrv=S.groups.filter(g=>g.prv).length;
   h+=`<div class="section"><div class="section-title">기계실 물량 입력 (개산) — TP: 감압밸브 세트 출구까지</div>
     <div class="form-row">
-      <span class="form-label">수도 인입관 길이 (m)</span>
+      <span class="form-label">수도 인입관 직관 (m)</span>
       <input class="form-inp sm" type="number" min="0" value="${M.inletLen??10}" onchange="setMR('inletLen',this.value)">
+      <span style="font-size:11px;color:var(--text2)">계량기~저수조 직관 (바이패스는 아래 별도)</span>
     </div>`;
   if(S.system==='booster'){
     h+=`<div class="form-row">
-      <span class="form-label">펌프 주변 배관 (m)</span>
-      <input class="form-inp sm" type="number" min="0" value="${M.pumpLen??12}" onchange="setMR('pumpLen',this.value)">
-      <span style="font-size:11px;color:var(--text2)">흡입·토출 합계 (펌프 1대당 약 6m 기준)</span>
+      <span class="form-label">LCV 바이패스 (m)</span>
+      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.lcvBypLen??3}" onchange="setMR('lcvBypLen',this.value)">
+      <span style="font-size:11px;color:var(--text2)">인입 관경으로 산출에 포함</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">펌프 흡입 배관 — 1대당 (m)</span>
+      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.suctionLen??4}" onchange="setMR('suctionLen',this.value)">
+      <span style="font-size:11px;color:var(--accent)">× ${P.count}대 = ${(((+M.suctionLen)||0)*P.count).toFixed(1)}m 자동</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">펌프 토출 배관 — 1대당 (m)</span>
+      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.dischargeLen??4}" onchange="setMR('dischargeLen',this.value)">
+      <span style="font-size:11px;color:var(--accent)">× ${P.count}대 = ${(((+M.dischargeLen)||0)*P.count).toFixed(1)}m 자동</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">비상 바이패스 (m)</span>
+      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.emerBypLen??6}" onchange="setMR('emerBypLen',this.value)">
+      <span style="font-size:11px;color:var(--text2)">시수직결 우회 배관 (인입 관경)</span>
     </div>`;
   }
   h+=`<div class="form-row">
-      <span class="form-label">메인·헤더 길이 (m)</span>
+      <span class="form-label">${S.system==='booster'?'토출 헤더·메인 (m)':'수조 출구·메인 (m)'}</span>
       <span style="font-size:13px;font-weight:600">${P.mrLen??8} m</span>
       <span style="font-size:11px;color:var(--text2)">위 '마찰손실 검토'의 기계실 배관 길이와 공용</span>
-    </div>
-    <div class="form-row">
+    </div>`;
+  if(nPrv){
+    h+=`<div class="form-row">
+      <span class="form-label">PRV 세트당 배관 (m)</span>
+      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.prvSetLen??2}" onchange="setMR('prvSetLen',this.value)">
+      <span style="font-size:11px;color:var(--accent)">× PRV ${nPrv}개소 자동</span>
+    </div>`;
+  }
+  h+=`<div class="form-row">
       <span class="form-label">엘보 개산 계수 (개/m)</span>
       <input class="form-inp sm" type="number" step="0.05" min="0" value="${M.elbowK??0.4}" onchange="setMR('elbowK',this.value)">
       <span class="form-label" style="width:auto">티 계수 (개/m)</span>
@@ -1195,7 +1234,7 @@ function renderValveList(){
         <th>구분</th><th>품명</th><th>규격</th><th>구경</th><th>수량</th><th>단위</th><th>비고</th>
       </tr></thead><tbody>`;
     for(const it of mr.items){
-      h+=`<tr><td>배관</td><td>강관</td><td>${esc(spec)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.len}</td><td>m</td><td style="color:var(--text2)">${esc(it.name)}</td></tr>`;
+      h+=`<tr><td>배관</td><td>강관</td><td>${esc(spec)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.len}</td><td>m</td><td style="color:var(--text2)">${esc(it.name)}${it.note?' · '+esc(it.note):''}</td></tr>`;
     }
     for(const it of mr.items){
       if(it.elbow) h+=`<tr><td>부속</td><td>엘보 90°</td><td>${esc(spec)}</td><td>${esc(it.pipe)}</td><td style="font-weight:700">${it.elbow}</td><td>개</td><td style="color:var(--text2)">${it.len}m × ${mr.eK}개/m 개산</td></tr>`;
@@ -1544,7 +1583,7 @@ function exportCSV(){
     const spec=pipeSpecLabel();
     rows.push([]);
     rows.push(['[기계실 물량(개산)]','품명','규격','구경','수량','단위','비고']);
-    for(const it of mr.items) rows.push(['배관','강관',spec,it.pipe,it.len,'m',it.name]);
+    for(const it of mr.items) rows.push(['배관','강관',spec,it.pipe,it.len,'m',it.name+(it.note?' · '+it.note:'')]);
     for(const it of mr.items) if(it.elbow) rows.push(['부속','엘보 90°',spec,it.pipe,it.elbow,'개',`${it.len}m×${mr.eK}개/m 개산`]);
     for(const it of mr.items) if(it.tee) rows.push(['부속','티',spec,it.pipe,it.tee,'개',`${it.len}m×${mr.tK}개/m 개산`]);
     if(mr.reducer) rows.push(['부속','레듀서',spec,S.pump.pumpPipe||'65A',mr.reducer,'개','펌프 접속부 ×2/대']);
@@ -1624,7 +1663,7 @@ function setFloorPipeProp(gid,idx,k,v){
 function resetAll(){
   if(!confirm('모든 설정을 초기화하시겠습니까?')) return;
   S.projectName='새 프로젝트'; S.system='booster'; S.material='sts';
-  S.mr={inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+  S.mr=mrDefaults();
   S.pump={count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8};
   S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3};
   S.groups=[]; _id=1;
@@ -1652,7 +1691,7 @@ function loadJSON(e){
       if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
       if(!S.pump.inletPipe)S.pump.inletPipe='50A';
       if(!S.material)S.material='sts';
-      if(!S.mr)S.mr={inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+      S.mr=Object.assign(mrDefaults(),S.mr||{});
       if(S.pump.mrLen==null)S.pump.mrLen=8;
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt(g.id?.slice(1));if(n>mx)mx=n;});
@@ -1711,7 +1750,7 @@ try{
       if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
       if(!S.pump.inletPipe)S.pump.inletPipe='50A';
       if(!S.material)S.material='sts';
-      if(!S.mr)S.mr={inletLen:10,pumpLen:12,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+      S.mr=Object.assign(mrDefaults(),S.mr||{});
       if(S.pump.mrLen==null)S.pump.mrLen=8;
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt((g.id||'').slice(1));if(n>mx)mx=n;});
