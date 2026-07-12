@@ -307,6 +307,7 @@ function calcValves(){
   if(isBst){
     add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
     add('수도 인입부','체크밸브','체크밸브(역류방지)',inletPipe,1,'저수조 입구 전');
+    add('수도 인입부','Y형 스트레이너','Y형 스트레이너(LCV 보호)',inletPipe,1,'LCV 전단 — 파일럿·시트 이물질 보호');
     add('수도 인입부','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,'저수조 인입 LCV – 수위 차면 자동 차단');
     add('수도 인입부','게이트밸브','게이트밸브(LCV 전·후 차단)',inletPipe,2,'LCV 교체·점검 시 격리용');
     add('수도 인입부','게이트밸브','게이트밸브(LCV 바이패스)',inletPipe,1,'평상시 닫힘 — LCV 정비 중 급수 유지');
@@ -323,6 +324,7 @@ function calcValves(){
     add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정');
     add('토출 헤더','수격방지기','수격방지기',P.mainPipe,1,'');
     add('비상 바이패스','게이트밸브','게이트밸브(시수직결 비상급수)',inletPipe,2,'시수 인입관→토출 주관 직결, 평상시 닫힘');
+    add('비상 바이패스','체크밸브','체크밸브(역류방지)',inletPipe,1,'시수→토출 방향만 허용 — 펌프수 역가압 방지');
   } else {
     add('고가수조 인입','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'');
     add('고가수조 인입','체크밸브','체크밸브(역류방지)',inletPipe,1,'');
@@ -331,7 +333,8 @@ function calcValves(){
     add('고가수조 출구','게이트밸브','게이트밸브(출구공통)',P.mainPipe,1,'');
   }
 
-  add('메인 수직관','유량계','유량계',P.mainPipe,1,'');
+  add('메인 수직관','게이트밸브','게이트밸브(유량계 전·후)',P.mainPipe,2,'유량계 교체용 차단');
+  add('메인 수직관','유량계','유량계',P.mainPipe,1,'전·후 차단밸브 사이 설치');
   add('메인 수직관 최상부','공기빼기밸브','자동공기빼기밸브','15A',1,'');
   add('메인 수직관 최하부','배수밸브','배수밸브','25A',1,'');
   const exCnt=Math.max(1,Math.ceil((+B.floors||1)/3));
@@ -749,11 +752,11 @@ const THEMES={
   dark:{bg:'#0d1117',surface:'#161b22',border:'#30363d',text:'#e6edf3',text2:'#8b949e',warnBg:'#1c1608',
     sc:{gv:'#3fb950',bv:'#bc8cff',cv:'#58a6ff',prv:'#d29922',st:'#3fb950',
       av:'#f85149',dv:'#8b949e',pg:'#d29922',wh:'#bc8cff',ex:'#8b949e',
-      fj:'#58a6ff',globe:'#f78166',pipe:'#8b949e',lcv:'#58a6ff'}},
+      fj:'#58a6ff',globe:'#f78166',pipe:'#8b949e',lcv:'#58a6ff',fm:'#58a6ff'}},
   light:{bg:'#ffffff',surface:'#f6f8fa',border:'#8c959f',text:'#1f2328',text2:'#57606a',warnBg:'#fff8c5',
     sc:{gv:'#1a7f37',bv:'#6639ba',cv:'#0969da',prv:'#9a6700',st:'#1a7f37',
       av:'#cf222e',dv:'#57606a',pg:'#9a6700',wh:'#6639ba',ex:'#57606a',
-      fj:'#0969da',globe:'#bc4c00',pipe:'#57606a',lcv:'#0969da'}}
+      fj:'#0969da',globe:'#bc4c00',pipe:'#57606a',lcv:'#0969da',fm:'#0969da'}}
 };
 let TH=THEMES.dark, SC=TH.sc;
 
@@ -867,6 +870,12 @@ function symPT(x,y){
     ${svgText(x+14,y+4,'PT',SC.pg,8,'start')}
   </g>`;
 }
+function symFM(x,y){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="10" fill="${SC.fm}" fill-opacity=".15" stroke="${SC.fm}" stroke-width="1.5"/>
+    ${svgText(x,y+3,'FM',SC.fm,7)}
+  </g>`;
+}
 function symTank(x,y,w,h,lbl){
   return `<g>
     <rect x="${x-w/2}" y="${y}" width="${w}" height="${h}" fill="${TH.surface}" stroke="${TH.border}" stroke-width="1.5" rx="4"/>
@@ -933,14 +942,15 @@ function renderDiagram(){
   s+=symCV(CX,CV1_Y);
   if(isBst){
     // ── LCV bypass section (부스터식 전용) ──
-    const LCV_TOP=CV1_Y+30, LCV_Y=CV1_Y+80, LCV_BOT=CV1_Y+130, BP_X=CX+80;
+    const LCV_TOP=CV1_Y+30, LCV_Y=CV1_Y+95, LCV_BOT=CV1_Y+145, BP_X=CX+80;
     // main line: CV → split → LCV → join → tank
     s+=svgLine(CX,CV1_Y+10,CX,LCV_TOP);
     // split horizontal to bypass
     s+=svgLine(CX,LCV_TOP,BP_X,LCV_TOP);
-    // main line continues through GV → LCV → GV (전·후 차단 — LCV 교체용)
+    // main line continues through GV → ST → LCV → GV (전·후 차단 + 파일럿 보호)
     s+=svgLine(CX,LCV_TOP,CX,LCV_Y-11);
-    s+=symGV(CX,LCV_TOP+20,7,'GV');
+    s+=symGV(CX,LCV_TOP+16,7,'GV');
+    s+=symST(CX,LCV_TOP+38);
     s+=symLCV(CX,LCV_Y);
     s+=svgLine(CX,LCV_Y+11,CX,LCV_BOT);
     s+=symGV(CX,LCV_BOT-20,7,'GV');
@@ -1024,6 +1034,7 @@ function renderDiagram(){
       s+=`<line x1="${ebX}" y1="${ebTop}" x2="${ebX}" y2="${ebBot}" stroke="${SC.prv}" stroke-width="1.5" ${bpD}/>`;
       s+=`<line x1="${ebX}" y1="${ebBot}" x2="${CX}" y2="${ebBot}" stroke="${SC.prv}" stroke-width="1.5" ${bpD}/>`;
       s+=symGV(ebX,ebTop+40,8,'GV');
+      s+=symCV(ebX,ebTop+80,8,'CV');
       s+=symGV(ebX,ebBot-40,8,'GV');
       s+=`<rect x="${ebX+6}" y="${ebMid-22}" width="66" height="44" rx="3" fill="${TH.warnBg}" stroke="${SC.prv}" stroke-width="1" opacity=".9"/>`;
       s+=svgText(ebX+39,ebMid-8,'비상 바이패스',SC.prv,8);
@@ -1039,7 +1050,11 @@ function renderDiagram(){
 
   // ── Main pipe section ──
   s+=svgLine(CX,HEADER_Y,CX,MAIN_END_Y,SC.pipe,2.5);
-  s+=svgText(CX-7,HEADER_Y+22,P.mainPipe,SC.cv,8,'end');
+  // 유량계 + 전·후 차단 게이트 (교체용)
+  s+=symGV(CX,HEADER_Y+18,7,'GV');
+  s+=symFM(CX,HEADER_Y+42);
+  s+=symGV(CX,HEADER_Y+66,7,'GV');
+  s+=svgText(CX-12,HEADER_Y+90,P.mainPipe,SC.cv,8,'end');
 
   // AV at top
   s+=svgLine(CX,MAIN_Y,CX+60,MAIN_Y);
@@ -1150,6 +1165,7 @@ function renderLegend(x,y){
     {sym:'ex',lbl:'신축이음(EX)'},
     {sym:'fj',lbl:'플렉시블(FJ)'},
     {sym:'lcv',lbl:'정수위밸브(LCV)'},
+    {sym:'fm',lbl:'유량계(FM)'},
   ];
   const lh=22, lw=160, lpad=10;
   let s=`<rect x="${x-10}" y="${y-10}" width="${lw+20}" height="${items.length*lh+26}" rx="6" fill="${TH.surface}" stroke="${TH.border}" stroke-width="1" opacity=".95"/>`;
@@ -1493,7 +1509,7 @@ function renderGuide(){
      body:`<strong>원리</strong> : 한쪽으로만 열리는 문 — 정방향 물살은 문을 밀고 지나가고, 거꾸로 흐르려 하면 문이 닫힙니다. 전기도 조작도 필요 없습니다.<br>펌프 토출측에 반드시 설치하며, 설치 순서는 펌프→플렉시블→체크밸브→게이트밸브 순입니다(게이트를 닫고 체크밸브 정비 가능).<br>수평 배관: 스윙형, 수직 배관: 리프트형을 사용합니다.`,
      tip:'펌프 정지 시 역류에 의한 수격(워터해머)을 방지합니다. 토출측 체크밸브는 펌프 임펠러 보호에도 중요합니다.'},
     {icon:'⊕',color:SC.lcv,badge:'수위제어',title:'수위조절밸브 (LCV/정수위밸브)',svg:gdLCV(),
-     body:`<strong>원리</strong> : 변기 물탱크와 같은 원리 — 수위가 만수위에 닿으면 볼탭·파일럿의 신호로 상수 인입 밸브가 스스로 닫힙니다.<br>저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, LCV 전·후 차단 게이트밸브(교체 시 격리용)와 바이패스 배관(게이트밸브 1개, 평상시 닫힘)을 함께 설치합니다.`,
+     body:`<strong>원리</strong> : 변기 물탱크와 같은 원리 — 수위가 만수위에 닿으면 볼탭·파일럿의 신호로 상수 인입 밸브가 스스로 닫힙니다.<br>저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, LCV 전·후 차단 게이트밸브(교체 시 격리용)와 바이패스 배관(게이트밸브 1개, 평상시 닫힘)을 함께 설치합니다.<br>LCV 전단에는 Y형 스트레이너를 두어 파일럿 오리피스 막힘(→ 월류 사고)을 방지합니다.`,
      tip:'LCV 고장은 저수조 월류(넘침) 사고로 직결됩니다. 볼탭 백업과 오버플로우관 상태를 정기 점검하세요.'},
     {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',svg:gdPRV(),
      body:`<strong>원리</strong> : 스프링과 다이어프램의 힘겨루기 — 2차측 압력이 스프링 설정값보다 오르면 밸브가 조여지고, 낮아지면 열려서 2차압이 항상 일정하게 유지됩니다.<br>1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치하며, 반드시 바이패스 배관을 함께 설치합니다.<br>전후 게이트밸브 + 바이패스 글로브밸브를 세트로 구성합니다.`,
