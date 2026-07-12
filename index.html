@@ -977,6 +977,9 @@ function renderDiagram(){
   // Ball float inside tank
   s+=`<circle cx="${CX+35}" cy="${TANK_Y+18}" r="7" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>`;
   s+=svgText(CX+35,TANK_Y+34,'볼탭',SC.gv,7);
+  // 수조 하부 청소용 배수밸브
+  s+=svgLine(CX+40,TANK_BOT,CX+40,TANK_BOT+2);
+  s+=symDV(CX+40,TANK_BOT+16);
   s+=svgLine(CX,TANK_BOT,CX,GV2_Y-10);
   s+=svgText(CX-7,(TANK_BOT+GV2_Y)/2+4,outPipe,TH.text2,8,'end');
   s+=symGV(CX,GV2_Y);
