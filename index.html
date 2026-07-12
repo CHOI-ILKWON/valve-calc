@@ -231,7 +231,7 @@ function groupFriction(g){
 
 // ── 기계실 물량 (개산) — TP: 감압밸브 세트 출구까지 ─────────────────────────
 function mrDefaults(){
-  return {inletLen:10,lcvBypLen:3,suctionLen:4,dischargeLen:4,emerBypLen:6,prvSetLen:2,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
+  return {inletLen:10,lcvBypLen:3,suctionLen:4,dischargeLen:2,emerBypLen:6,prvSetLen:2,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
 }
 function calcMR(){
   const P=S.pump, M=S.mr||{};
@@ -694,11 +694,13 @@ function renderSettings(){
       <span class="form-label">펌프 흡입 배관 — 1대당 (m)</span>
       <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.suctionLen??4}" onchange="setMR('suctionLen',this.value)">
       <span style="font-size:11px;color:var(--accent)">× ${P.count}대 = ${(((+M.suctionLen)||0)*P.count).toFixed(1)}m 자동</span>
+      <span style="font-size:11px;color:var(--text2)">흡입 헤더 분기~펌프 노즐까지</span>
     </div>
     <div class="form-row">
       <span class="form-label">펌프 토출 배관 — 1대당 (m)</span>
-      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.dischargeLen??4}" onchange="setMR('dischargeLen',this.value)">
+      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.dischargeLen??2}" onchange="setMR('dischargeLen',this.value)">
       <span style="font-size:11px;color:var(--accent)">× ${P.count}대 = ${(((+M.dischargeLen)||0)*P.count).toFixed(1)}m 자동</span>
+      <span style="font-size:11px;color:var(--text2)">펌프 노즐~합류점(티)까지만 — 합관 이후는 아래 헤더·메인에서 1회 계산</span>
     </div>
     <div class="form-row">
       <span class="form-label">비상 바이패스 (m)</span>
