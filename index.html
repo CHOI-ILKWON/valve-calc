@@ -308,7 +308,8 @@ function calcValves(){
     add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
     add('수도 인입부','체크밸브','체크밸브(역류방지)',inletPipe,1,'저수조 입구 전');
     add('수도 인입부','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,'저수조 인입 LCV – 수위 차면 자동 차단');
-    add('수도 인입부','게이트밸브','게이트밸브(LCV 바이패스)',inletPipe,2,'LCV 바이패스 전·후 차단용');
+    add('수도 인입부','게이트밸브','게이트밸브(LCV 전·후 차단)',inletPipe,2,'LCV 교체·점검 시 격리용');
+    add('수도 인입부','게이트밸브','게이트밸브(LCV 바이패스)',inletPipe,1,'평상시 닫힘 — LCV 정비 중 급수 유지');
     add('저수조 내부','볼탭','볼탭(기계식 보조)','25A',1,'LCV 고장 시 2차 수위 조절');
     add('저수조 하부','배수밸브','배수밸브(청소용)','50A',1,'저수조 청소·배수용');
     add('저수조 출구','게이트밸브','게이트밸브(출구공통)',pumpPipe,1,'저수조 출구');
@@ -937,18 +938,19 @@ function renderDiagram(){
     s+=svgLine(CX,CV1_Y+10,CX,LCV_TOP);
     // split horizontal to bypass
     s+=svgLine(CX,LCV_TOP,BP_X,LCV_TOP);
-    // main line continues through LCV
+    // main line continues through GV → LCV → GV (전·후 차단 — LCV 교체용)
     s+=svgLine(CX,LCV_TOP,CX,LCV_Y-11);
+    s+=symGV(CX,LCV_TOP+20,7,'GV');
     s+=symLCV(CX,LCV_Y);
     s+=svgLine(CX,LCV_Y+11,CX,LCV_BOT);
+    s+=symGV(CX,LCV_BOT-20,7,'GV');
     // join horizontal from bypass
     s+=svgLine(CX,LCV_BOT,BP_X,LCV_BOT);
     s+=svgLine(CX,LCV_BOT,CX,TANK_Y);
     // bypass vertical
     s+=svgLine(BP_X,LCV_TOP,BP_X,LCV_BOT);
-    // bypass GVs (normally closed)
+    // bypass GV (normally closed) — 1개
     s+=symGV(BP_X,LCV_TOP+35,8,'GV');
-    s+=symGV(BP_X,LCV_BOT-35,8,'GV');
     s+=svgText(BP_X+20,(LCV_TOP+LCV_BOT)/2+4,'바이패스',SC.prv,7,'start');
     s+=svgText(BP_X+20,(LCV_TOP+LCV_BOT)/2+14,'(평상시 닫힘)',SC.prv,7,'start');
     // pipe labels
@@ -1491,7 +1493,7 @@ function renderGuide(){
      body:`<strong>원리</strong> : 한쪽으로만 열리는 문 — 정방향 물살은 문을 밀고 지나가고, 거꾸로 흐르려 하면 문이 닫힙니다. 전기도 조작도 필요 없습니다.<br>펌프 토출측에 반드시 설치하며, 설치 순서는 펌프→플렉시블→체크밸브→게이트밸브 순입니다(게이트를 닫고 체크밸브 정비 가능).<br>수평 배관: 스윙형, 수직 배관: 리프트형을 사용합니다.`,
      tip:'펌프 정지 시 역류에 의한 수격(워터해머)을 방지합니다. 토출측 체크밸브는 펌프 임펠러 보호에도 중요합니다.'},
     {icon:'⊕',color:SC.lcv,badge:'수위제어',title:'수위조절밸브 (LCV/정수위밸브)',svg:gdLCV(),
-     body:`<strong>원리</strong> : 변기 물탱크와 같은 원리 — 수위가 만수위에 닿으면 볼탭·파일럿의 신호로 상수 인입 밸브가 스스로 닫힙니다.<br>저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, 점검·교체용 바이패스 배관(게이트밸브 2개)을 함께 설치합니다.`,
+     body:`<strong>원리</strong> : 변기 물탱크와 같은 원리 — 수위가 만수위에 닿으면 볼탭·파일럿의 신호로 상수 인입 밸브가 스스로 닫힙니다.<br>저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, LCV 전·후 차단 게이트밸브(교체 시 격리용)와 바이패스 배관(게이트밸브 1개, 평상시 닫힘)을 함께 설치합니다.`,
      tip:'LCV 고장은 저수조 월류(넘침) 사고로 직결됩니다. 볼탭 백업과 오버플로우관 상태를 정기 점검하세요.'},
     {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',svg:gdPRV(),
      body:`<strong>원리</strong> : 스프링과 다이어프램의 힘겨루기 — 2차측 압력이 스프링 설정값보다 오르면 밸브가 조여지고, 낮아지면 열려서 2차압이 항상 일정하게 유지됩니다.<br>1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치하며, 반드시 바이패스 배관을 함께 설치합니다.<br>전후 게이트밸브 + 바이패스 글로브밸브를 세트로 구성합니다.`,
