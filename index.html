@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1786,5 +1786,16 @@ document.getElementById('projectName').value=S.projectName||'';
 // 처음 방문자는 사용법 탭, 작업하던 사용자는 계통 설정 탭으로
 switchTab(hadSaved?1:0);
 </script>
+
+<!-- 새 기능 소식 구독 (로그인 없음, 90초 뒤 1회 노출, 거절하면 30일간 안 뜸) -->
+<script src="https://choi-ilkwon.github.io/js/subscribe.js?v=1"></script>
+<script>
+  MEPSubscribe.init({
+    apiUrl:  "https://script.google.com/macros/s/AKfycbzOwmnJdBeqkH4QMdbQRagHXFnOA7sXnkQDmGeerVi4mYUF9WL_vB3C8LIq1-AZekQX/exec",
+    appId:   "valve",
+    appName: "밸브 계통도 계산서"
+  });
+</script>
+
 </body>
 </html>
