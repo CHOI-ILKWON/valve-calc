@@ -237,12 +237,14 @@ function calcMR(){
   const P=S.pump, M=S.mr||{};
   const isBst=S.system==='booster';
   const segs=[];
-  const add=(name,pipe,len,note='')=>{if(len>0)segs.push({name,pipe,len:Math.round(len*10)/10,note});};
+  // teeFix: 티 개수가 길이가 아니라 개소로 정해지는 구간(펌프 헤더 분기 등)은 그 수를 직접 준다.
+  const add=(name,pipe,len,note='',teeFix=null)=>{if(len>0)segs.push({name,pipe,len:Math.round(len*10)/10,note,teeFix});};
   add('수도 인입관',P.inletPipe||'50A',+M.inletLen||0);
   if(isBst){
     add('LCV 바이패스',P.inletPipe||'50A',+M.lcvBypLen||0,'평상시 닫힘');
-    add('펌프 흡입 배관',P.pumpPipe||'65A',(+M.suctionLen||0)*P.count,`${M.suctionLen}m × ${P.count}대`);
-    add('펌프 토출 배관',P.pumpPipe||'65A',(+M.dischargeLen||0)*P.count,`${M.dischargeLen}m × ${P.count}대`);
+    // 흡입·토출 헤더의 분기는 펌프 대수만큼 생긴다. 길이 × 계수로는 모자란다 (2026-08-30 정정)
+    add('펌프 흡입 배관',P.pumpPipe||'65A',(+M.suctionLen||0)*P.count,`${M.suctionLen}m × ${P.count}대 · 티는 헤더 분기 ${P.count}개소`,P.count);
+    add('펌프 토출 배관',P.pumpPipe||'65A',(+M.dischargeLen||0)*P.count,`${M.dischargeLen}m × ${P.count}대 · 티는 헤더 분기 ${P.count}개소`,P.count);
     add('토출 헤더·메인(분기까지)',P.mainPipe,+P.mrLen||0);
     add('비상 바이패스(시수직결)',P.inletPipe||'50A',+M.emerBypLen||0,'평상시 닫힘');
   } else {
@@ -254,7 +256,7 @@ function calcMR(){
   for(const [pipe,n] of Object.entries(prvByPipe))
     add('PRV 세트 배관',pipe,(+M.prvSetLen||0)*n,`${M.prvSetLen}m × ${n}개소`);
   const eK=+M.elbowK||0, tK=+M.teeK||0;
-  const items=segs.map(s=>({...s,elbow:Math.ceil(s.len*eK),tee:Math.ceil(s.len*tK)}));
+  const items=segs.map(s=>({...s,elbow:Math.ceil(s.len*eK),tee:s.teeFix!=null?s.teeFix:Math.ceil(s.len*tK)}));
   return {items,reducer:isBst?P.count*2:0,eK,tK,insul:M.insul||'고무발포 25T'};
 }
 function pipeSpecLabel(){
@@ -319,10 +321,13 @@ function calcValves(){
     add('펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,P.count,`×${P.count}대`);
     add('펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,P.count,`×${P.count}대`);
     add('펌프 토출측','체크밸브','체크밸브',pumpPipe,P.count,`×${P.count}대 – 게이트밸브 안쪽(펌프측)`);
+    // 기준: WS-006 — 학회 「건축기계설비 설계기준」 3.3.7 (1) 2)
+    //   「펌프 토출측 및 양수관 구간에 설치된 첵밸브 상단」에 부착한다. 목적은 첵밸브의 파손 방지이므로
+    //   토출 헤더(첵밸브 하류)가 아니라 첵밸브 상류측(펌프측)이라야 한다. 2026-08-30 위치 정정.
+    add('펌프 토출측','수격방지기','수격방지기',pumpPipe,P.count,`×${P.count}대 – 첵밸브 상류측(펌프측). 첵밸브 파손 방지`);
     add('펌프 토출측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대 – 체크밸브 점검용 차단`);
     add('토출 헤더','압력계','압력계',P.mainPipe,1,'');
     add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정');
-    add('토출 헤더','수격방지기','수격방지기',P.mainPipe,1,'');
     add('비상 바이패스','게이트밸브','게이트밸브(시수직결 비상급수)',inletPipe,2,'시수 인입관→토출 주관 직결, 평상시 닫힘');
     add('비상 바이패스','체크밸브','체크밸브(역류방지)',inletPipe,1,'시수→토출 방향만 허용 — 펌프수 역가압 방지');
   } else {
@@ -354,6 +359,17 @@ function calcValves(){
     }
     add(`${g.name} 최상부`,'공기빼기밸브','자동공기빼기밸브','15A',1,'입상관 최상부');
     add(`${g.name} 최하부`,'배수밸브','배수밸브','25A',1,'입상관 최하부');
+    // 기준: WS-006 — 학회 3.3.7 · 3.3.3 (1)
+    //   「수직배관에는 25~30m 구간마다 첵밸브를 설치하여 유동 정지시의 역류에너지의 작용을 분산하고,
+    //    첵밸브 상류 측에는 워터해머흡수기를 부착하여 첵밸브의 파손을 방지한다」
+    //   30 m 로 나눠 개수를 낸다. 층고 3.5 m 면 약 8~9 층마다이며 저층 건물은 0 개가 된다.
+    const gTop=Math.max(+g.fromFloor||0,+g.toFloor||0)||B.floors;
+    const riseH=Math.max(0,(gTop-1)*(+B.floorHeight||3.5));
+    const ckN=Math.floor(riseH/30);
+    if(ckN>0){
+      add(`${g.name} 입상관`,'체크밸브','체크밸브(역류에너지 분산)',g.pipe,ckN,`입상 ${riseH.toFixed(1)}m ÷ 30m — 25~30m 구간마다`);
+      add(`${g.name} 입상관`,'수격방지기','수격방지기',g.pipe,ckN,'각 첵밸브 상류측 — 첵밸브 파손 방지');
+    }
     for(const fp of (g.floorPipes||[])){
       add(`${g.name} ${fp.floorNo}층 주관`,'볼밸브',`볼밸브(${fp.floorNo}층 주관 차단)`,fp.pipe||g.pipe,+fp.qty||1,'층별 주관');
     }
@@ -1008,6 +1024,10 @@ function renderDiagram(){
       s+=symPump(px,PUMP_SUCK_Y+COMP_OFFSETS.pump,18,pumpLabels[i]);
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj2);
       s+=svgText(px-7,PUMP_SUCK_Y+COMP_OFFSETS.fj2+18,pumpPipe,TH.text2,8,'end');
+      // 수격방지기는 첵밸브 상류측(펌프측) — 학회 3.3.7 (1) 2). 첵밸브 파손 방지
+      const whY=PUMP_SUCK_Y+(COMP_OFFSETS.fj2+COMP_OFFSETS.cv)/2;
+      s+=svgLine(px,whY,px-30,whY);
+      s+=symWH(px-30,whY);
       s+=symCV(px,PUMP_SUCK_Y+COMP_OFFSETS.cv,8,'CV');
       s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv2,8,'GV');
     }
@@ -1019,13 +1039,11 @@ function renderDiagram(){
     s+=svgLine(CX,PUMP_DISC_Y,CX,HEADER_Y);
     s+=svgText(CX-7,(PUMP_DISC_Y+HEADER_Y)/2+4,P.mainPipe,TH.text2,8,'end');
 
-    // 토출 헤더 계기: 압력계·압력탱크(우) / 수격방지기(좌)
+    // 토출 헤더 계기: 압력계·압력탱크(우). 수격방지기는 첵밸브 상류측으로 옮김 (학회 3.3.7)
     s+=svgLine(CX,HEADER_Y-50,CX+60,HEADER_Y-50);
     s+=symPG(CX+60,HEADER_Y-50);
     s+=svgLine(CX,HEADER_Y-15,CX+60,HEADER_Y-15);
     s+=symPT(CX+60,HEADER_Y-15);
-    s+=svgLine(CX,HEADER_Y-32,CX-60,HEADER_Y-32);
-    s+=symWH(CX-60,HEADER_Y-32);
 
     // 비상 바이패스 — 시수 인입관(체크밸브 직후)에서 분기, 저수조·펌프를 우회해 토출 주관에 직결
     {
