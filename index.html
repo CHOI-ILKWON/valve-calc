@@ -309,6 +309,10 @@ function calcValves(){
   function add(pos,name,spec,pipe,qty,note=''){list.push({no:no++,pos,name,spec,pipe,qty,note,mat:valveMat(name,pipe)});}
 
   if(isBst){
+    // 기준: WS-006 Rule 8 — 학회 3.3.6. 「건물의 흔들림, 배관의 진동, 부동침하 등에 의한 변위의
+    //   흡수를 위해서는 플렉시블조인트를 설치하거나 스위블이음으로 배관하여야 한다」
+    //   건물은 말뚝 위에 얹히고 땅은 가라앉으므로 지중관이 건물로 들어오는 자리가 가장 크게 어긋난다.
+    add('수도 인입부','플렉시블조인트','플렉시블조인트(건물 인입부)',inletPipe,1,'지중관→건물. 부동침하 변위 흡수 – 학회 3.3.6');
     add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
     add('수도 인입부','체크밸브','체크밸브(역류방지)',inletPipe,1,'저수조 입구 전');
     add('수도 인입부','Y형 스트레이너','Y형 스트레이너(LCV 보호)',inletPipe,1,'LCV 전단 — 파일럿·시트 이물질 보호');
@@ -319,6 +323,9 @@ function calcValves(){
     add('저수조 내부','볼탭','볼탭(기계식 보조)','25A',1,'LCV 고장 시 2차 수위 조절');
     add('저수조 내부','수격방지기','수격방지기(볼탭용)','20A',1,'볼탭 급폐 충격 흡수 – 학회 3.3.7 (1) 4). 토출측 1m 이내');
     add('저수조 하부','배수밸브','배수밸브(청소용)','50A',1,'저수조 청소·배수용');
+    // 기준: WS-006 Rule 8 — 저수조는 만수 시 무게로 가라앉고 배관은 안 가라앉는다
+    add('저수조 입구','플렉시블조인트','플렉시블조인트(수조 접속)',inletPipe,1,'수조 침하 변위 흡수 – 학회 3.3.6');
+    add('저수조 출구','플렉시블조인트','플렉시블조인트(수조 접속)',pumpPipe,1,'수조 침하 변위 흡수 – 학회 3.3.6');
     add('저수조 출구','게이트밸브','게이트밸브(출구공통)',pumpPipe,1,'저수조 출구');
     add('펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`);
     add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,P.count,`×${P.count}대`);
@@ -335,6 +342,8 @@ function calcValves(){
     add('비상 바이패스','게이트밸브','게이트밸브(시수직결 비상급수)',inletPipe,2,'시수 인입관→토출 주관 직결, 평상시 닫힘');
     add('비상 바이패스','체크밸브','체크밸브(역류방지)',inletPipe,1,'시수→토출 방향만 허용 — 펌프수 역가압 방지');
   } else {
+    // 기준: WS-006 Rule 8 — 학회 3.3.6. 지중관이 건물로 들어오는 자리
+    add('건물 인입부','플렉시블조인트','플렉시블조인트(건물 인입부)',inletPipe,1,'지중관→건물. 부동침하 변위 흡수 – 학회 3.3.6');
     add('고가수조 인입','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'');
     add('고가수조 인입','체크밸브','체크밸브(역류방지)',inletPipe,1,'');
     add('고가수조 내부','볼탭','볼탭','25A',1,'수위 조절');
@@ -347,8 +356,16 @@ function calcValves(){
   add('메인 수직관','유량계','유량계',P.mainPipe,1,'전·후 차단밸브 사이 설치');
   add('메인 수직관 최상부','공기빼기밸브','자동공기빼기밸브','15A',1,'');
   add('메인 수직관 최하부','배수밸브','배수밸브','25A',1,'');
-  const exCnt=Math.max(1,Math.ceil((+B.floors||1)/3));
-  add('메인 수직관','신축이음','벨로우즈형 신축이음',P.mainPipe,exCnt,`${B.floors}층÷3=${exCnt}개`);
+  // 기준: WS-006 Rule 7 — 신축이음의 간격. 학회 「건축기계설비 설계기준」 표 5.1
+  //   「팽창이음 부속의 허용배관길이」가 최고사용온도별로 나뉜다.
+  //     0~50℃  단식 30m / 복식 60m      <- 급수는 여기(상수 연중 5~25℃)
+  //     50~69℃ 단식 25m / 복식 50m
+  //     70~100℃ 단식 20m / 복식 40m
+  //   단식 기준 30 m 마다 1개. 종전 「층수÷3」(층고 3.5m 면 10.5m 마다)은 근거가 없었고
+  //   냉온수 기준을 급수에 쓴 것보다도 3배 촘촘했다 (2026-08-30 정정).
+  const riseH=Math.max(0,((+B.floors||1)-1)*(+B.floorHeight||3.5));
+  const exCnt=Math.max(1,Math.ceil(riseH/30));
+  add('메인 수직관','신축이음','벨로우즈형 신축이음(단식)',P.mainPipe,exCnt,`입상 ${riseH.toFixed(1)}m ÷ 30m — 학회 표 5.1 (0~50℃ 단식)`);
 
   for(const g of G){
     add(`${g.name} 분기`,'볼밸브','볼밸브(입상관 차단)',g.pipe,1,'메인 분기');
@@ -938,7 +955,7 @@ function renderDiagram(){
   const PUMP_DISC_Y=PUMP_SUCK_Y+COMP_OFFSETS.gv2+30;
   const HEADER_Y=isBst?PUMP_DISC_Y+70:GV2_Y+60;
 
-  const exCnt=Math.ceil(B.floors/3);
+  const exCnt=Math.max(1,Math.ceil(Math.max(0,(B.floors-1)*(B.floorHeight||3.5))/30));   // 기준: WS-006 Rule 7
   const MAIN_Y=HEADER_Y+80;
   const MAIN_H=(exCnt+1)*55;
   const MAIN_END_Y=MAIN_Y+MAIN_H;
