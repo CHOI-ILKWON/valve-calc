@@ -231,6 +231,8 @@ function groupFriction(g){
 
 // ── 기계실 물량 (개산) — TP: 감압밸브 세트 출구까지 ─────────────────────────
 function mrDefaults(){
+  // 기준: WS-006 Rule 4 — 엘보·티 계수. 밸브는 LDV 로 따로 세므로 이 계수는 엘보·티만 덮는다.
+  //   학회 표 5.8(ASHRAE Fundamentals 2008)로 계산하면 엘보·티만으로 직관의 0.38 이다(WS-006 3.4).
   return {inletLen:10,lcvBypLen:3,suctionLen:4,dischargeLen:2,emerBypLen:6,prvSetLen:2,elbowK:0.4,teeK:0.15,insul:'고무발포 25T'};
 }
 function calcMR(){
