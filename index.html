@@ -157,6 +157,45 @@ const PIPES=['15A','20A','25A','32A','40A','50A','65A','80A','100A','125A','150A
 let _id=1; const uid=()=>'g'+(++_id);
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
+// ── 적용등급 ─────────────────────────────────────────────────────────────────
+// 기준안 KL-HV-DW-0013 / 2.pdf. 도면의 모든 기구를 일률적으로 필수로 보지 않는다.
+const GRADE={DEF:'DEFAULT',CON:'CONDITIONAL',OPT:'OPTIONAL',EXC:'EXCLUDED'};
+const GRADE_LBL={DEFAULT:'기본',CONDITIONAL:'조건부',OPTIONAL:'선택',EXCLUDED:'제외'};
+const GRADE_COL={DEFAULT:'#58a6ff',CONDITIONAL:'#d29922',OPTIONAL:'#8b949e',EXCLUDED:'#6e7681'};
+
+// ── 인입부 설정 (규칙 테이블 — 코드에 박지 않고 데이터로 둔다) ───────────────
+function inletDefaults(){
+  return {
+    meter:true,           // 수도계량기 — 별도 계측 필요 시 (기준안 A-2, CONDITIONAL)
+    tankInlet:'airgap',   // 'airgap' 자유낙수 | 'submerged' 수몰 유입
+    dcv:'auto',           // 'auto' | 'force'(관할 승인조건) | 'off'
+    valveType:'gate',     // 'gate' | 'butterfly' — 기준안 A-6 기본값은 게이트
+    pg:true,              // 인입압 압력계 (게이지콕 포함)
+    lcvBypass:true,       // LCV 바이패스 (OPTIONAL, 평상시 닫힘)
+    emerBypass:true       // 비상 바이패스(시수직결)
+  };
+}
+function IN(){ return S.inlet||(S.inlet=inletDefaults()); }
+// 펌프 패키지(스키드) 포함 품목 — 켜면 외부 수량에서 빼 중복 산출을 막는다 (기준안 C-5·D-3)
+function pkgDefaults(){ return {fj:false,cv:false,gv:false,pg:false}; }
+function PKG(){ return S.pumpPkg||(S.pumpPkg=pkgDefaults()); }
+
+// 인입부 차단밸브 종류 — 기준안 A-6. 기본 게이트, 사용자가 버터플라이로 변경 가능.
+// ※ 2.pdf 범례에 밸브별 DN 범위(BUTTERFLY DN50~DN150 등)가 있으나 한글 주기를 판독하지
+//   못했다. 관경 자동 전환 규칙은 주기 확인 후 세운다 (지금은 사용자 선택).
+function shutoffType(){ return IN().valveType==='butterfly'?'버터플라이밸브':'게이트밸브'; }
+
+// 더블체크밸브 적용 판정 — 기준안 A-4
+// 자유낙수(air gap)로만 유입되고 가압계통과 분리되면 역사이펀 경로가 없어 적용하지 않는다.
+function dcvDecision(){
+  const I=IN();
+  if(I.dcv==='force') return {on:true, why:'관할 수도사업자 승인조건 — 사용자 지정'};
+  if(I.dcv==='off')   return {on:false,why:'사용자가 제외함 (승인조건 확인 필요)'};
+  if(I.tankInlet==='submerged')
+    return {on:true, why:'저수조 수몰 유입 — 역사이펀 경로가 있다'};
+  return {on:false,why:'자유낙수 유입이고 가압급수계통과 분리됨 — 토수구 공간이 역류를 물리적으로 차단'};
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 const S={
   projectName:'새 프로젝트',
@@ -165,6 +204,8 @@ const S={
   mr:mrDefaults(),
   pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8},
   building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3},
+  inlet:inletDefaults(),
+  pumpPkg:pkgDefaults(),
   groups:[]
 };
 let activeTab=0;
@@ -281,8 +322,15 @@ function valveMat(name,pipe){
   switch(name){
     case '게이트밸브': case '볼밸브': case '글로브밸브': case 'Y형 스트레이너':
       return big?bigBody:smallBody;
+    case '버터플라이밸브':
+      return `덕타일주철(STS 디스크·EPDM 시트) 웨이퍼형 ${rating}`;
     case '체크밸브':
       return big?`주철 스모렌스키 ${rating}`:(preset==='general'?`청동 스윙식 ${rating}`:`STS304 스윙식 ${rating}`);
+    case '더블체크밸브':
+      // 기준: DC-001 — 체크밸브 두 개 사이에 중간실을 두고 그 압력을 감시한다
+      return big?`주철 어셈블리형 ${rating}`:`청동/STS 어셈블리형 ${rating}`;
+    case '수도계량기':
+      return big?`습식 플랜지형 ${rating}`:`습식 나사형 ${rating}`;
     case '감압밸브':
       return preset==='allsts'?`STS 파일럿식 ${rating}`:`주철 파일럿식 ${rating}`;
     case '수위조절밸브(LCV)':
@@ -306,20 +354,79 @@ function calcValves(){
   const pumpPipe=P.pumpPipe||'65A';
   const list=[];
   let no=1;
-  function add(pos,name,spec,pipe,qty,note=''){list.push({no:no++,pos,name,spec,pipe,qty,note,mat:valveMat(name,pipe)});}
+  // opt: {grade, cond 적용조건·사유, state NO/NC, dir 흐름방향, pkg 패키지포함, warn 경고}
+  function add(pos,name,spec,pipe,qty,note='',opt={}){
+    list.push({no:no++,pos,name,spec,pipe,qty,note,mat:valveMat(name,pipe),
+      grade:opt.grade||GRADE.DEF, cond:opt.cond||'', state:opt.state||'',
+      dir:opt.dir||'', pkg:!!opt.pkg, warn:opt.warn||''});
+  }
+  // 적용하지 않기로 판정된 품목도 사유와 함께 남긴다 (기준안 화면기능 7 — 기준 구성과의 차이 비교)
+  function skip(pos,name,pipe,why){
+    list.push({no:no++,pos,name,spec:'— 미적용 —',pipe,qty:0,note:'',mat:'-',
+      grade:GRADE.EXC, cond:why, state:'', dir:'', pkg:false, warn:''});
+  }
+  const I=IN(), PK=PKG(), SHUT=shutoffType(), dcv=dcvDecision();
 
   if(isBst){
+    // ── 시상수 인입부 — 기준안 A. 도면 순서: GV → WM → ST → GV → DCV → PG → FJ → LCV세트
+    add('수도 인입부',SHUT,`${SHUT}(인입차단)`,inletPipe,1,'시상수 인입 차단 — 도면 FROM CIVIL PIPE 직후',
+      {grade:GRADE.DEF,cond:'유지관리용 차단'});
+    if(I.meter)
+      add('수도 인입부','수도계량기','수도계량기(건물 내부 계측용)',inletPipe,1,
+        '관할 수도사업자 계량기와 별도',{grade:GRADE.CON,cond:'건물 내부에서 별도 사용량 계측이 필요함'});
+    else
+      skip('수도 인입부','수도계량기',inletPipe,'별도 계측이 필요하지 않음 — 사용자 제외');
+    // 기준안 A-3 — 보호 대상 기기(WM·LCV) 전단에 둔다. 청소 분해공간·드레인 방향 고려.
+    // ※ 도면 A 의 스트레이너와 LCV 세트 B 의 스트레이너가 같은 것인지 주기 확인 필요. 지금은 1개로 본다.
+    add('수도 인입부','Y형 스트레이너',`Y형 스트레이너(${I.meter?'계량기·':''}LCV 보호)`,inletPipe,1,
+      '보호 대상 기기 전단 — 청소 분해공간·드레인 방향 확보',{grade:GRADE.DEF,dir:'유입 → 저수조'});
+    add('수도 인입부',SHUT,`${SHUT}(기기 전단 차단)`,inletPipe,1,
+      '스트레이너 청소·DCV 정비 시 격리',{grade:GRADE.DEF,cond:'유지관리용 차단'});
+    // 기준안 A-4 — 자유낙수면 적용하지 않는다
+    if(dcv.on)
+      add('수도 인입부','더블체크밸브','더블체크밸브 어셈블리(역류방지)',inletPipe,1,
+        '단순 체크밸브 1개와 구분 — 중간실 배출형',
+        {grade:GRADE.CON,cond:dcv.why,dir:'시수 → 저수조',warn:'관할 수도사업자 승인조건을 우선한다'});
+    else
+      skip('수도 인입부','더블체크밸브',inletPipe,dcv.why);
+    if(I.pg)
+      add('수도 인입부','압력계','압력계(인입압, 게이지콕 포함)',inletPipe,1,
+        '인입압 확인 — 게이지콕(소형 차단밸브) 포함',{grade:GRADE.DEF});
+    // 기준안 B-5 — 도면의 「게이트밸브 이후 플렉시블 조인트」를 기본값으로 반영
+    add('수도 인입부','플렉시블조인트','플렉시블조인트(차단밸브 이후)',inletPipe,1,
+      '도면 기준 위치 — 부동침하·진동 변위 흡수. 학회 3.3.6',{grade:GRADE.DEF});
+
+    // ── LCV 세트 — 기준안 B ──
+    add('LCV 세트','Y형 스트레이너','Y형 스트레이너(LCV 전단)',inletPipe,1,
+      'LCV 파일럿·시트 이물질 보호',{grade:GRADE.DEF,dir:'유입 → LCV'});
+    add('LCV 세트','수격방지기','수격방지기(LCV용)','20A',1,
+      'LCV 급폐 충격 흡수 – 학회 3.3.7 (1) 3). 토출측 1m 이내',{grade:GRADE.DEF});
+    add('LCV 세트','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,
+      '저수조 인입 LCV – 수위 차면 자동 차단',{grade:GRADE.DEF});
+    add('LCV 세트',SHUT,`${SHUT}(LCV 전·후 차단)`,inletPipe,2,
+      'LCV 교체·점검 시 격리용',{grade:GRADE.DEF,cond:'밸브 정비·교체'});
+    // 기준안 B-4 — 첨부 기준에 따라 기본 적용 (저수조 하부 청소용 배수밸브와 별개)
+    add('LCV 세트','배수밸브','배수밸브(LCV 후단)','25A',1,
+      'LCV 정비 시 잔류수 배출 — 기계실 배수구로 간접배수',{grade:GRADE.DEF});
+    if(I.lcvBypass){
+      add('LCV 바이패스',SHUT,`${SHUT}(바이패스 전·후)`,inletPipe,2,
+        'LCV 정비 중 임시 급수',{grade:GRADE.OPT,state:'NC',
+        cond:'유지관리 중 급수 지속이 필요함',
+        warn:'열어두면 LCV 가 수위를 못 막아 저수조 과수위·월류로 이어진다. 사용 후 반드시 닫을 것'});
+      add('LCV 바이패스','글로브밸브','글로브밸브(유량조절)',inletPipe,1,
+        '바이패스 수동 유량 조절',{grade:GRADE.OPT,state:'NC',
+        warn:'평상시 닫힘 상태를 유지한다'});
+    } else {
+      skip('LCV 바이패스',SHUT,inletPipe,'사용자가 바이패스를 사용하지 않음');
+    }
+
     // 기준: WS-006 Rule 8 — 학회 3.3.6. 「건물의 흔들림, 배관의 진동, 부동침하 등에 의한 변위의
     //   흡수를 위해서는 플렉시블조인트를 설치하거나 스위블이음으로 배관하여야 한다」
     //   건물은 말뚝 위에 얹히고 땅은 가라앉으므로 지중관이 건물로 들어오는 자리가 가장 크게 어긋난다.
-    add('수도 인입부','플렉시블조인트','플렉시블조인트(건물 인입부)',inletPipe,1,'지중관→건물. 부동침하 변위 흡수 – 학회 3.3.6');
-    add('수도 인입부','게이트밸브','게이트밸브(인입차단)',inletPipe,1,'수도계량기 직후');
-    add('수도 인입부','체크밸브','체크밸브(역류방지)',inletPipe,1,'저수조 입구 전');
-    add('수도 인입부','Y형 스트레이너','Y형 스트레이너(LCV 보호)',inletPipe,1,'LCV 전단 — 파일럿·시트 이물질 보호');
-    add('수도 인입부','수격방지기','수격방지기(LCV용)','20A',1,'LCV 급폐 충격 흡수 – 학회 3.3.7 (1) 3). 토출측 1m 이내');
-    add('수도 인입부','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,'저수조 인입 LCV – 수위 차면 자동 차단');
-    add('수도 인입부','게이트밸브','게이트밸브(LCV 전·후 차단)',inletPipe,2,'LCV 교체·점검 시 격리용');
-    add('수도 인입부','게이트밸브','게이트밸브(LCV 바이패스)',inletPipe,1,'평상시 닫힘 — LCV 정비 중 급수 유지');
+    //   기준 도면의 FJ 위치(차단밸브 이후)와는 목적이 다르므로 선택 항목으로 둔다.
+    add('건물 인입 경계','플렉시블조인트','플렉시블조인트(건물 인입부)',inletPipe,1,
+      '지중관→건물. 부동침하 변위 흡수 – 학회 3.3.6',
+      {grade:GRADE.OPT,cond:'지중관이 건물로 들어오는 자리의 부등침하 대비'});
     // 기준: WS-006 Rule 9 — 25A 면 100 ㎥ 를 19 시간에 채운다. LCV 고장 시 밤새 복구된다.
     //   20A 는 30 시간이라 하루를 넘겨 백업 노릇을 못 한다.
     add('저수조 내부','볼탭','볼탭(기계식 보조)','25A',1,'LCV 고장 시 2차 수위 조절 – 100㎥ 약 19h');
@@ -332,20 +439,49 @@ function calcValves(){
     add('저수조 입구','플렉시블조인트','플렉시블조인트(수조 접속)',inletPipe,1,'수조 침하 변위 흡수 – 학회 3.3.6');
     add('저수조 출구','플렉시블조인트','플렉시블조인트(수조 접속)',pumpPipe,1,'수조 침하 변위 흡수 – 학회 3.3.6');
     add('저수조 출구','게이트밸브','게이트밸브(출구공통)',pumpPipe,1,'저수조 출구');
-    add('펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`);
-    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,P.count,`×${P.count}대`);
-    add('펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,P.count,`×${P.count}대`);
-    add('펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,P.count,`×${P.count}대`);
-    add('펌프 토출측','체크밸브','체크밸브',pumpPipe,P.count,`×${P.count}대 – 게이트밸브 안쪽(펌프측)`);
+    // 기준안 C-5 · D-3 — 펌프 패키지(스키드)에 포함된 품목은 외부 수량에서 뺀다
+    const pkgNote='펌프 패키지(스키드) 포함 — 외부 중복 산출 방지';
+    const pk=(on,pos,name,spec,pipe,qty,note,opt)=>{
+      if(on) skip(pos,name,pipe,pkgNote); else add(pos,name,spec,pipe,qty,note,opt);
+    };
+    pk(PK.gv,'펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`,
+      {grade:GRADE.DEF,cond:'펌프 교체·정비'});
+    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,P.count,`×${P.count}대 — 임펠러 보호`,
+      {grade:GRADE.DEF,dir:'수조 → 펌프'});
+    pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,P.count,`×${P.count}대`,
+      {grade:GRADE.DEF});
+    // 기준안 C-3 — 흡입측에 불필요한 체크밸브·저항기구를 자동으로 추가하지 않는다
+    skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (기준안 C-3)');
+    pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,P.count,`×${P.count}대`,
+      {grade:GRADE.DEF});
+    pk(PK.cv,'펌프 토출측','체크밸브','체크밸브',pumpPipe,P.count,`×${P.count}대 – 게이트밸브 안쪽(펌프측)`,
+      {grade:GRADE.DEF,dir:'펌프 → 헤더',cond:'정지 펌프로의 역류·역회전 방지'});
     // 기준: WS-006 — 학회 「건축기계설비 설계기준」 3.3.7 (1) 2)
     //   「펌프 토출측 및 양수관 구간에 설치된 첵밸브 상단」에 부착한다. 목적은 첵밸브의 파손 방지이므로
     //   토출 헤더(첵밸브 하류)가 아니라 첵밸브 상류측(펌프측)이라야 한다. 2026-08-30 위치 정정.
     add('펌프 토출측','수격방지기','수격방지기',pumpPipe,P.count,`×${P.count}대 – 첵밸브 상류측(펌프측). 첵밸브 파손 방지`);
-    add('펌프 토출측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대 – 체크밸브 점검용 차단`);
-    add('토출 헤더','압력계','압력계',P.mainPipe,1,'');
-    add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정');
-    add('비상 바이패스','게이트밸브','게이트밸브(시수직결 비상급수)',inletPipe,2,'시수 인입관→토출 주관 직결, 평상시 닫힘');
-    add('비상 바이패스','체크밸브','체크밸브(역류방지)',inletPipe,1,'시수→토출 방향만 허용 — 펌프수 역가압 방지');
+    pk(PK.gv,'펌프 토출측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대 – 체크밸브 점검용 차단`,
+      {grade:GRADE.DEF,cond:'개별 펌프의 정비·교체'});
+    // 기준안 D-4 — 펌프 토출압과 공통 헤더압을 구분해 확인한다.
+    //   기준: IN-001 1.3.4 「압력계를 양쪽에 둔다 — 토출과 흡입의 차가 실양정이다」
+    pk(PK.pg,'펌프 토출측','압력계','압력계(펌프 토출압, 게이지콕 포함)',pumpPipe,P.count,
+      `×${P.count}대 – 흡입압과의 차가 실양정`,{grade:GRADE.DEF});
+    add('토출 헤더','압력계','압력계(공통 헤더압, 게이지콕 포함)',P.mainPipe,1,'계통 송출압 확인',{grade:GRADE.DEF});
+    add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정',{grade:GRADE.DEF});
+    // 기준안 A-4 — 시상수와 가압급수계통이 직접 연결되는 자리. 유입구 방식과 무관하게 역류 경로가 생긴다.
+    if(I.emerBypass){
+      add('비상 바이패스',SHUT,`${SHUT}(시수직결 비상급수)`,inletPipe,2,
+        '시수 인입관→토출 주관 직결',{grade:GRADE.OPT,state:'NC',
+        cond:'펌프 전체 정지 시 시수압으로 저층부 임시 급수',
+        warn:'시수와 가압계통의 교차연결 지점 — 평상시 닫힘을 유지하고 더블체크밸브를 함께 둔다'});
+      add('비상 바이패스','더블체크밸브','더블체크밸브 어셈블리(역류방지)',inletPipe,1,
+        '시수→토출 방향만 허용 — 펌프수의 시수 본관 역가압 방지',
+        {grade:GRADE.CON,dir:'시수 → 토출 주관',
+        cond:'시상수와 가압급수계통이 직접 연결됨 (기준안 A-4)',
+        warn:'단순 체크밸브 1개로는 교차연결 방호가 되지 않는다 — DC-001'});
+    } else {
+      skip('비상 바이패스',SHUT,inletPipe,'사용자가 비상 바이패스를 두지 않음');
+    }
   } else {
     // 기준: WS-006 Rule 8 — 학회 3.3.6. 지중관이 건물로 들어오는 자리
     add('건물 인입부','플렉시블조인트','플렉시블조인트(건물 인입부)',inletPipe,1,'지중관→건물. 부동침하 변위 흡수 – 학회 3.3.6');
@@ -410,13 +546,48 @@ function calcValves(){
     }
   }
 
-  // Summary
-  const names=['게이트밸브','볼밸브','체크밸브','감압밸브','글로브밸브','Y형 스트레이너',
-    '공기빼기밸브','배수밸브','압력계','압력탱크','수격방지기','신축이음','플렉시블조인트','유량계','볼탭','수위조절밸브(LCV)'];
+  // Summary — 미적용(EXCLUDED) 품목은 수량산출에서 뺀다
+  const names=['게이트밸브','버터플라이밸브','볼밸브','체크밸브','더블체크밸브','감압밸브','글로브밸브',
+    'Y형 스트레이너','공기빼기밸브','배수밸브','압력계','압력탱크','수격방지기','신축이음','플렉시블조인트',
+    '유량계','수도계량기','볼탭','수위조절밸브(LCV)'];
   const summary={};
   for(const n of names) summary[n]=0;
-  for(const item of list) summary[item.name]=(summary[item.name]||0)+item.qty;
-  return {list,summary};
+  for(const item of list){
+    if(item.grade===GRADE.EXC) continue;
+    summary[item.name]=(summary[item.name]||0)+item.qty;
+  }
+  return {list,summary,warnings:validateValves(list)};
+}
+
+// ── 자동 검증 — 기준안 4 ─────────────────────────────────────────────────────
+function validateValves(list){
+  const W=[];
+  const on=(name,pos)=>list.some(i=>i.grade!==GRADE.EXC&&i.name===name&&(!pos||i.pos.includes(pos)));
+  const I=IN(), PK=PKG(), P=S.pump;
+  if(S.system==='booster'){
+    if(!on('수위조절밸브(LCV)')) W.push('저수조 인입 LCV 가 없습니다.');
+    else if(list.filter(i=>i.grade!==GRADE.EXC&&i.pos==='LCV 세트'&&/게이트|버터플라이/.test(i.name))
+      .reduce((s,i)=>s+i.qty,0)<2) W.push('LCV 전·후 차단밸브가 2개 미만입니다 — 정비 시 격리가 안 됩니다.');
+    if(!on('체크밸브','펌프 토출측')&&!PK.cv) W.push('펌프 토출 체크밸브가 없습니다 — 정지 펌프로 역류합니다.');
+    if(!on('게이트밸브','펌프 토출측')&&!on('버터플라이밸브','펌프 토출측')&&!PK.gv)
+      W.push('펌프 토출 차단밸브가 없습니다 — 펌프 1대 정비에 전 계통을 세우게 됩니다.');
+    if(I.emerBypass&&!on('더블체크밸브','비상 바이패스'))
+      W.push('비상 바이패스(시수직결)가 있는데 더블체크밸브가 없습니다 — 교차연결 방호 미흡.');
+    if(I.dcv==='off') W.push('더블체크밸브를 사용자가 제외했습니다 — 관할 수도사업자 승인조건을 확인하세요.');
+    if(I.tankInlet==='submerged'&&I.dcv==='auto'&&!on('더블체크밸브','수도 인입부'))
+      W.push('수몰 유입인데 인입부 더블체크밸브가 적용되지 않았습니다.');
+    if(I.lcvBypass) W.push('LCV 바이패스는 평상시 닫힘(NC)입니다 — 열어두면 저수조 과수위·월류로 이어집니다.');
+    if(list.filter(i=>i.grade!==GRADE.EXC&&i.name==='수도계량기').reduce((s,i)=>s+i.qty,0)>1)
+      W.push('수도계량기가 중복 설치되어 있습니다.');
+  }
+  // 압력계 차단기구 — 규격 문자열에 게이지콕이 명시되어 있는지
+  for(const i of list) if(i.grade!==GRADE.EXC&&i.name==='압력계'&&!/게이지콕|차단/.test(i.spec))
+    W.push(`압력계(${i.pos})에 게이지콕·차단기구가 명시되지 않았습니다.`);
+  // 밸브 관경과 연결배관 관경 — 인입부 품목은 인입관경을 따라야 한다
+  const inletPipe=P.inletPipe||'50A';
+  for(const i of list) if(i.grade!==GRADE.EXC&&i.pos==='수도 인입부'&&i.pipe!==inletPipe&&i.name!=='수격방지기')
+    W.push(`${i.name}(${i.pipe})가 수도 인입관 ${inletPipe}와 다릅니다.`);
+  return W;
 }
 
 // ── Tab switch ────────────────────────────────────────────────────────────────
@@ -549,6 +720,87 @@ function renderSettings(){
       </select>
     </div>
   </div>`;
+
+  // ── 인입부 구성 (기준안 KL-HV-DW-0013) ──
+  if(S.system==='booster'){
+    const I=IN(), PK=PKG(), dcv=dcvDecision();
+    h+=`<div class="section">
+      <div class="section-title">인입부 구성 — 기준 도면 반영</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
+        FROM CIVIL PIPE → 차단밸브 → 수도계량기 → 스트레이너 → 차단밸브 → 더블체크밸브 → 압력계 → 플렉시블 → LCV 세트 → 저수조
+      </div>
+      <div class="form-row">
+        <span class="form-label">인입부 차단밸브</span>
+        <select onchange="setInlet('valveType',this.value)">
+          <option value="gate"${I.valveType!=='butterfly'?' selected':''}>게이트밸브 (기준 기본값)</option>
+          <option value="butterfly"${I.valveType==='butterfly'?' selected':''}>버터플라이밸브</option>
+        </select>
+        <span style="font-size:11px;color:var(--text2)">기호·자재명·수량이 함께 바뀝니다</span>
+      </div>
+      <div class="form-row">
+        <span class="form-label">수도계량기</span>
+        <select onchange="setInlet('meter',this.value==='1')">
+          <option value="1"${I.meter?' selected':''}>설치 (건물 내부 별도 계측)</option>
+          <option value="0"${!I.meter?' selected':''}>미설치</option>
+        </select>
+        <span style="font-size:11px;color:var(--text2)">관할 수도사업자 계량기와 별도인지 확인</span>
+      </div>
+      <div class="form-row">
+        <span class="form-label">저수조 유입 방식</span>
+        <select onchange="setInlet('tankInlet',this.value)">
+          <option value="airgap"${I.tankInlet!=='submerged'?' selected':''}>자유낙수 (유입구가 O.F 수위보다 위)</option>
+          <option value="submerged"${I.tankInlet==='submerged'?' selected':''}>수몰 유입 (유입구가 물에 잠김)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <span class="form-label">더블체크밸브</span>
+        <select onchange="setInlet('dcv',this.value)">
+          <option value="auto"${I.dcv==='auto'?' selected':''}>자동 판정 (유입방식·바이패스에 따름)</option>
+          <option value="force"${I.dcv==='force'?' selected':''}>강제 적용 (관할 승인조건)</option>
+          <option value="off"${I.dcv==='off'?' selected':''}>제외</option>
+        </select>
+        <span style="font-size:11px;color:${dcv.on?SC.prv:'var(--text2)'}">
+          현재: <strong>${dcv.on?'적용':'미적용'}</strong> — ${esc(dcv.why)}
+        </span>
+      </div>
+      <div class="form-row">
+        <span class="form-label">인입압 압력계</span>
+        <select onchange="setInlet('pg',this.value==='1')">
+          <option value="1"${I.pg?' selected':''}>설치 (게이지콕 포함)</option>
+          <option value="0"${!I.pg?' selected':''}>미설치</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <span class="form-label">LCV 바이패스</span>
+        <select onchange="setInlet('lcvBypass',this.value==='1')">
+          <option value="1"${I.lcvBypass?' selected':''}>설치 (평상시 닫힘)</option>
+          <option value="0"${!I.lcvBypass?' selected':''}>미설치</option>
+        </select>
+        <span style="font-size:11px;color:${SC.prv}">⚠ 열어두면 저수조 과수위·월류</span>
+      </div>
+      <div class="form-row">
+        <span class="form-label">비상 바이패스</span>
+        <select onchange="setInlet('emerBypass',this.value==='1')">
+          <option value="1"${I.emerBypass?' selected':''}>설치 (시수직결, 평상시 닫힘)</option>
+          <option value="0"${!I.emerBypass?' selected':''}>미설치</option>
+        </select>
+        <span style="font-size:11px;color:var(--text2)">시수–가압계통 교차연결 → 더블체크밸브 동반</span>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">펌프 패키지(스키드) 포함 품목</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
+        제작사 스키드에 포함된 품목을 체크하면 외부 수량에서 빠집니다 (중복 산출 방지).
+        스키드 구성이 기준 도면과 다르면 임의로 지우지 말고 차이를 발주처에 확인하세요.
+      </div>
+      <div class="form-row" style="gap:16px;flex-wrap:wrap">
+        ${[['fj','플렉시블조인트'],['cv','체크밸브'],['gv','차단밸브'],['pg','압력계']].map(([k,lbl])=>
+          `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+            <input type="checkbox"${PK[k]?' checked':''} onchange="setPkg('${k}',this.checked)"> ${lbl}
+          </label>`).join('')}
+      </div>
+    </div>`;
+  }
 
   // Building
   h+=`<div class="section">
@@ -924,6 +1176,36 @@ function symFM(x,y){
     ${svgText(x,y+3,'FM',SC.fm,7)}
   </g>`;
 }
+// 수도계량기 — 기준 도면 WM
+function symWM(x,y){
+  return `<g>
+    <circle cx="${x}" cy="${y}" r="10" fill="${TH.bg}" stroke="${SC.fm}" stroke-width="1.5"/>
+    ${svgText(x,y+3,'WM',SC.fm,7)}
+    ${svgText(x+19,y+4,'수도계량기',SC.fm,8,'start')}
+  </g>`;
+}
+// 더블체크밸브 — 체크 2개 + 중간실 (DC-001)
+function symDCV(x,y){
+  return `<g>
+    <rect x="${x-17}" y="${y-11}" width="34" height="22" rx="3" fill="${TH.bg}" stroke="${SC.cv}" stroke-width="1.4"/>
+    <polygon points="${x-13},${y-6} ${x-4},${y} ${x-13},${y+6}" fill="${SC.cv}"/>
+    <polygon points="${x+3},${y-6} ${x+12},${y} ${x+3},${y+6}" fill="${SC.cv}"/>
+    ${svgText(x+26,y+4,'DCV',SC.cv,8,'start')}
+  </g>`;
+}
+// 버터플라이밸브 — 디스크 축 표현
+function symBF(x,y,s=10,lbl='BF'){
+  return `<g>
+    <polygon points="${x-s},${y-s} ${x+s},${y+s} ${x+s},${y-s} ${x-s},${y+s}" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>
+    <line x1="${x}" y1="${y-s}" x2="${x}" y2="${y+s}" stroke="${SC.gv}" stroke-width="1.5"/>
+    <circle cx="${x}" cy="${y}" r="2.5" fill="${SC.gv}"/>
+    ${svgText(x+s+9,y+4,lbl,SC.gv,8,'start')}
+  </g>`;
+}
+// 인입부 차단밸브 기호 — 사용자 설정에 따라 기호·명칭이 함께 바뀐다 (기준안 A-6)
+function symShut(x,y,s=10){
+  return IN().valveType==='butterfly'?symBF(x,y,s,'BF'):symGV(x,y,s,'GV');
+}
 function symTank(x,y,w,h,lbl){
   return `<g>
     <rect x="${x-w/2}" y="${y}" width="${w}" height="${h}" fill="${TH.surface}" stroke="${TH.border}" stroke-width="1.5" rx="4"/>
@@ -954,9 +1236,22 @@ function renderDiagram(){
     return base+i*groupSpacing;
   });
 
-  // Y layout
-  const INLET_Y=40, GV1_Y=90, CV1_Y=140;
-  const TANK_Y=isBst?310:190; // 고가수조식은 LCV 구간이 없어 압축
+  // Y layout — 인입부는 구성(수도계량기·DCV·PG)에 따라 동적으로 쌓는다 (기준안 A)
+  const INLET_Y=40;
+  const _I=IN(), _dcv=dcvDecision();
+  const inletStack=[];
+  if(isBst){
+    inletStack.push('shut');
+    if(_I.meter) inletStack.push('wm');
+    inletStack.push('st','shut');
+    if(_dcv.on) inletStack.push('dcv');
+    if(_I.pg) inletStack.push('pg');
+    inletStack.push('fj');
+  } else { inletStack.push('shut','cv'); }
+  const IN_STEP=40, IN_TOP=INLET_Y+45;
+  const inletYs=inletStack.map((k,i)=>IN_TOP+i*IN_STEP);
+  const INLET_END=inletYs[inletYs.length-1];
+  const TANK_Y=isBst?INLET_END+185:INLET_END+50; // 고가수조식은 LCV 구간이 없어 압축
   const TANK_H=80, TANK_BOT=TANK_Y+TANK_H;
   const GV2_Y=TANK_BOT+35;
   const PUMP_SUCK_Y=GV2_Y+55;
@@ -980,43 +1275,63 @@ function renderDiagram(){
   s+=`<svg width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" style="display:block;min-width:600px">`;
   s+=`<rect width="${svgW}" height="${svgH}" fill="${TH.bg}"/>`;
 
-  // ── Inlet section ──
-  s+=svgText(CX,INLET_Y-8,'수도 인입관',TH.text2,10);
-  s+=svgLine(CX,INLET_Y,CX,GV1_Y-10);
+  // ── Inlet section — 기준 도면 순서 (FROM CIVIL PIPE → … → LCV 세트) ──
+  s+=svgText(CX,INLET_Y-8,isBst?'시상수 인입 (FROM CIVIL PIPE)':'수도 인입관',TH.text2,10);
+  s+=svgLine(CX,INLET_Y,CX,inletYs[0]-10);
   s+=svgText(CX-7,INLET_Y+22,inletPipe,TH.text2,8,'end');
-  s+=symGV(CX,GV1_Y);
-  s+=svgLine(CX,GV1_Y+10,CX,CV1_Y-10);
-  s+=svgText(CX-7,(GV1_Y+CV1_Y)/2+4,inletPipe,TH.text2,8,'end');
-  s+=symCV(CX,CV1_Y);
+  inletStack.forEach((kind,i)=>{
+    const y=inletYs[i];
+    if(i>0) s+=svgLine(CX,inletYs[i-1]+11,CX,y-11);
+    if(kind==='shut')     s+=symShut(CX,y);
+    else if(kind==='wm')  s+=symWM(CX,y);
+    else if(kind==='st')  s+=symST(CX,y);
+    else if(kind==='dcv') s+=symDCV(CX,y);
+    else if(kind==='cv')  s+=symCV(CX,y);
+    else if(kind==='fj')  s+=symFJ(CX,y);
+    else if(kind==='pg'){ // 압력계는 측면 분기
+      s+=svgLine(CX,y,CX+26,y);
+      s+=symPG(CX+38,y);
+      s+=svgText(CX+52,y+4,'(게이지콕 포함)',TH.text2,7,'start');
+    }
+  });
+  s+=svgText(CX-7,(INLET_Y+INLET_END)/2,inletPipe,TH.text2,8,'end');
   if(isBst){
-    // ── LCV bypass section (부스터식 전용) ──
-    const LCV_TOP=CV1_Y+30, LCV_Y=CV1_Y+95, LCV_BOT=CV1_Y+145, BP_X=CX+80;
+    // ── LCV 세트 + 바이패스 (부스터식 전용) ──
+    const LCV_TOP=INLET_END+28, LCV_Y=INLET_END+92, LCV_BOT=INLET_END+150, BP_X=CX+80;
     // main line: CV → split → LCV → join → tank
-    s+=svgLine(CX,CV1_Y+10,CX,LCV_TOP);
+    s+=svgLine(CX,INLET_END+11,CX,LCV_TOP);
+    s+=svgText(CX-84,LCV_TOP-6,'LCV 세트',SC.lcv,9,'start');
     // split horizontal to bypass
     s+=svgLine(CX,LCV_TOP,BP_X,LCV_TOP);
     // main line continues through GV → ST → LCV → GV (전·후 차단 + 파일럿 보호)
     s+=svgLine(CX,LCV_TOP,CX,LCV_Y-11);
-    s+=symGV(CX,LCV_TOP+16,7,'GV');
+    s+=symShut(CX,LCV_TOP+16,7);
     s+=symST(CX,LCV_TOP+38);
     s+=symLCV(CX,LCV_Y);
     s+=svgLine(CX,LCV_Y+11,CX,LCV_BOT);
-    s+=symGV(CX,LCV_BOT-20,7,'GV');
+    s+=symShut(CX,LCV_BOT-22,7);
+    // LCV 후단 배수밸브 — 기준안 B-4
+    s+=svgLine(CX,LCV_BOT-6,CX-30,LCV_BOT-6);
+    s+=symDV(CX-42,LCV_BOT-6,'DV');
+    s+=svgText(CX-56,LCV_BOT+6,'LCV 후단 배수',SC.dv,7,'end');
     // join horizontal from bypass
     s+=svgLine(CX,LCV_BOT,BP_X,LCV_BOT);
     s+=svgLine(CX,LCV_BOT,CX,TANK_Y);
-    // bypass vertical
-    s+=svgLine(BP_X,LCV_TOP,BP_X,LCV_BOT);
-    // bypass GV (normally closed) — 1개
-    s+=symGV(BP_X,LCV_TOP+35,8,'GV');
-    s+=svgText(BP_X+20,(LCV_TOP+LCV_BOT)/2+4,'바이패스',SC.prv,7,'start');
-    s+=svgText(BP_X+20,(LCV_TOP+LCV_BOT)/2+14,'(평상시 닫힘)',SC.prv,7,'start');
+    if(_I.lcvBypass){
+      // bypass vertical — 전·후 차단(NC) + 유량조절 글로브
+      s+=svgLine(BP_X,LCV_TOP,BP_X,LCV_BOT);
+      s+=symShut(BP_X,LCV_TOP+28,7);
+      s+=symGlobe(BP_X,(LCV_TOP+LCV_BOT)/2+8,'GL');
+      s+=symShut(BP_X,LCV_BOT-28,7);
+      s+=svgText(BP_X+22,(LCV_TOP+LCV_BOT)/2-16,'바이패스',SC.prv,7,'start');
+      s+=svgText(BP_X+22,(LCV_TOP+LCV_BOT)/2-6,'(평상시 닫힘 NC)',SC.prv,7,'start');
+    }
     // pipe labels
-    s+=svgText(CX-7,(CV1_Y+TANK_Y)/2+4,inletPipe,TH.text2,8,'end');
+    s+=svgText(CX-7,(LCV_BOT+TANK_Y)/2+4,inletPipe,TH.text2,8,'end');
   } else {
     // 고가수조식: 볼탭이 수위 조절 — 인입관 직결
-    s+=svgLine(CX,CV1_Y+10,CX,TANK_Y);
-    s+=svgText(CX-7,(CV1_Y+TANK_Y)/2+4,inletPipe,TH.text2,8,'end');
+    s+=svgLine(CX,INLET_END+10,CX,TANK_Y);
+    s+=svgText(CX-7,(INLET_END+TANK_Y)/2+4,inletPipe,TH.text2,8,'end');
   }
 
   const tankLbl=isBst?'저수조':'고가수조';
@@ -1077,18 +1392,19 @@ function renderDiagram(){
     s+=svgLine(CX,HEADER_Y-15,CX+60,HEADER_Y-15);
     s+=symPT(CX+60,HEADER_Y-15);
 
-    // 비상 바이패스 — 시수 인입관(체크밸브 직후)에서 분기, 저수조·펌프를 우회해 토출 주관에 직결
-    {
+    // 비상 바이패스 — 시수 인입관에서 분기, 저수조·펌프를 우회해 토출 주관에 직결
+    // 기준안 A-4: 시수와 가압계통의 교차연결 지점이므로 더블체크밸브를 둔다
+    if(_I.emerBypass){
       const ebX=Math.max(pumpXs[nPump-1]+70,CX+140);
       const bpD='stroke-dasharray="6,3" stroke-opacity=".7"';
-      const ebTop=CV1_Y+15, ebBot=PUMP_DISC_Y+10;
+      const ebTop=inletYs[0]+15, ebBot=PUMP_DISC_Y+10;
       const ebMid=(ebTop+ebBot)/2;
       s+=`<line x1="${CX}" y1="${ebTop}" x2="${ebX}" y2="${ebTop}" stroke="${SC.prv}" stroke-width="1.5" ${bpD}/>`;
       s+=`<line x1="${ebX}" y1="${ebTop}" x2="${ebX}" y2="${ebBot}" stroke="${SC.prv}" stroke-width="1.5" ${bpD}/>`;
       s+=`<line x1="${ebX}" y1="${ebBot}" x2="${CX}" y2="${ebBot}" stroke="${SC.prv}" stroke-width="1.5" ${bpD}/>`;
-      s+=symGV(ebX,ebTop+40,8,'GV');
-      s+=symCV(ebX,ebTop+80,8,'CV');
-      s+=symGV(ebX,ebBot-40,8,'GV');
+      s+=symShut(ebX,ebTop+40,8);
+      s+=symDCV(ebX,ebTop+82);
+      s+=symShut(ebX,ebBot-40,8);
       s+=`<rect x="${ebX+6}" y="${ebMid-22}" width="66" height="44" rx="3" fill="${TH.warnBg}" stroke="${SC.prv}" stroke-width="1" opacity=".9"/>`;
       s+=svgText(ebX+39,ebMid-8,'비상 바이패스',SC.prv,8);
       s+=svgText(ebX+39,ebMid+4,'(시수직결)',SC.prv,7);
@@ -1219,6 +1535,8 @@ function renderLegend(x,y){
     {sym:'fj',lbl:'플렉시블(FJ)'},
     {sym:'lcv',lbl:'정수위밸브(LCV)'},
     {sym:'fm',lbl:'유량계(FM)'},
+    {sym:'fm',lbl:'수도계량기(WM)'},
+    {sym:'cv',lbl:'더블체크밸브(DCV)'},
   ];
   const lh=22, lw=160, lpad=10;
   let s=`<rect x="${x-10}" y="${y-10}" width="${lw+20}" height="${items.length*lh+26}" rx="6" fill="${TH.surface}" stroke="${TH.border}" stroke-width="1" opacity=".95"/>`;
@@ -1234,11 +1552,12 @@ function renderLegend(x,y){
 
 // ── Tab 3: Valve list ─────────────────────────────────────────────────────────
 function renderValveList(){
-  const {list,summary}=calcValves();
-  const COLORS={'게이트밸브':SC.gv,'볼밸브':SC.bv,'체크밸브':SC.cv,'감압밸브':SC.prv,
+  const {list,summary,warnings}=calcValves();
+  const COLORS={'게이트밸브':SC.gv,'버터플라이밸브':SC.gv,'볼밸브':SC.bv,'체크밸브':SC.cv,
+    '더블체크밸브':SC.cv,'감압밸브':SC.prv,
     '글로브밸브':SC.globe,'Y형 스트레이너':SC.st,'공기빼기밸브':SC.av,'배수밸브':SC.dv,
     '압력계':SC.pg,'압력탱크':SC.pg,'수격방지기':SC.wh,'신축이음':SC.ex,'플렉시블조인트':SC.fj,
-    '유량계':SC.cv,'볼탭':SC.gv,'수위조절밸브(LCV)':SC.lcv};
+    '유량계':SC.cv,'수도계량기':SC.cv,'볼탭':SC.gv,'수위조절밸브(LCV)':SC.lcv};
 
   const prvGroups=S.groups.filter(g=>g.prv);
   let h='';
@@ -1248,10 +1567,15 @@ function renderValveList(){
     h+=prvGroups.map(g=>`<strong>${esc(g.name)}</strong> — 분기점에 PRV + 바이패스 설치 필요`).join(' / ');
     h+=`</div>`;
   }
+  if(warnings&&warnings.length){
+    h+=`<div class="warn-banner">🔎 <strong>자동 검증</strong><ul style="margin:6px 0 0 18px;padding:0">`
+      +warnings.map(w=>`<li style="margin:2px 0">${esc(w)}</li>`).join('')+`</ul></div>`;
+  }
 
-  // 품목별 → 구경별 세부 수량 집계
+  // 품목별 → 구경별 세부 수량 집계 (미적용 제외)
   const byPipe={};
   for(const item of list){
+    if(item.grade===GRADE.EXC) continue;
     const m=byPipe[item.name]=byPipe[item.name]||{};
     m[item.pipe]=(m[item.pipe]||0)+item.qty;
   }
@@ -1279,20 +1603,35 @@ function renderValveList(){
       <span class="section-title" style="margin:0">상세 밸브 목록</span>
       <button class="btn btn-success btn-sm ml" onclick="exportCSV()">📊 엑셀(CSV) 내보내기</button>
     </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:8px">
+      적용등급 — <span style="color:${GRADE_COL.DEFAULT}">기본</span> 조건 없이 적용 ·
+      <span style="color:${GRADE_COL.CONDITIONAL}">조건부</span> 조건 충족 시 ·
+      <span style="color:${GRADE_COL.OPTIONAL}">선택</span> 사용자 판단 ·
+      <span style="color:${GRADE_COL.EXCLUDED}">제외</span> 적용하지 않음(사유 표시, 수량 미산입)
+    </div>
     <table class="vlist"><thead><tr>
-      <th>No.</th><th>설치 위치</th><th>기기명</th><th>규격</th><th>재질/등급</th><th>구경</th><th>수량</th><th>비고</th>
+      <th>No.</th><th>등급</th><th>설치 위치</th><th>기기명</th><th>규격</th><th>재질/등급</th><th>구경</th><th>수량</th><th>적용조건 · 비고</th>
     </tr></thead><tbody>`;
   for(const item of list){
-    const col=COLORS[item.name]||'#8b949e';
-    h+=`<tr>
+    const exc=item.grade===GRADE.EXC;
+    const col=exc?GRADE_COL.EXCLUDED:(COLORS[item.name]||'#8b949e');
+    const gc=GRADE_COL[item.grade]||'#8b949e';
+    const bits=[];
+    if(item.cond) bits.push(`<span style="color:${gc}">${esc(item.cond)}</span>`);
+    if(item.note) bits.push(esc(item.note));
+    if(item.state) bits.push(`<strong style="color:${SC.prv}">평상시 ${item.state==='NC'?'닫힘(NC)':'열림(NO)'}</strong>`);
+    if(item.dir) bits.push(`흐름 ${esc(item.dir)}`);
+    if(item.warn) bits.push(`<span style="color:${SC.prv}">⚠ ${esc(item.warn)}</span>`);
+    h+=`<tr${exc?' style="opacity:.55"':''}>
       <td style="color:var(--text2)">${item.no}</td>
+      <td><span class="badge" style="background:${gc}22;border:1px solid ${gc}66;color:${gc}">${GRADE_LBL[item.grade]}</span></td>
       <td>${esc(item.pos)}</td>
-      <td><span style="color:${col};font-weight:600">${esc(item.name)}</span></td>
+      <td><span style="color:${col};font-weight:600${exc?';text-decoration:line-through':''}">${esc(item.name)}</span></td>
       <td>${esc(item.spec)}</td>
       <td style="color:var(--text2)">${esc(item.mat||'-')}</td>
       <td><span class="badge" style="background:${col}22;border:1px solid ${col}66;color:${col}">${esc(item.pipe)}</span></td>
-      <td style="font-weight:700">${item.qty}</td>
-      <td style="color:var(--text2)">${esc(item.note)}</td>
+      <td style="font-weight:700">${exc?'—':item.qty}</td>
+      <td style="color:var(--text2)">${bits.join(' · ')}</td>
     </tr>`;
   }
   h+=`</tbody></table></div>`;
@@ -1642,14 +1981,29 @@ function setMaterial(v){S.material=v;renderAll();}
 // ── 엑셀(CSV) 내보내기 ────────────────────────────────────────────────────────
 function exportCSV(){
   S.projectName=document.getElementById('projectName').value||S.projectName;
-  const {list,summary}=calcValves();
+  const {list,summary,warnings}=calcValves();
+  const dcv=dcvDecision();
   const rows=[];
   rows.push([S.projectName+' — 밸브 목록',
     (S.system==='booster'?'부스터펌프식':'고가수조식'),
     `${S.building.floors}층`, '출력일 '+new Date().toISOString().slice(0,10)]);
+  if(S.system==='booster'){
+    const I=IN();
+    rows.push(['[인입부 기준]','저수조 유입: '+(I.tankInlet==='submerged'?'수몰 유입':'자유낙수'),
+      '수도계량기: '+(I.meter?'설치':'미설치'),
+      '더블체크밸브: '+(dcv.on?'적용':'미적용')+' — '+dcv.why]);
+  }
   rows.push([]);
-  rows.push(['No.','설치 위치','기기명','규격','재질/등급','구경','수량','비고']);
-  for(const i of list) rows.push([i.no,i.pos,i.name,i.spec,i.mat||'',i.pipe,i.qty,i.note]);
+  rows.push(['No.','적용등급','설치 위치','기기명','규격','재질/등급','구경','수량','적용조건','평상시','흐름방향','비고·경고']);
+  for(const i of list) rows.push([i.no,GRADE_LBL[i.grade],i.pos,i.name,i.spec,i.mat||'',i.pipe,
+    i.grade===GRADE.EXC?'':i.qty, i.cond,
+    i.state==='NC'?'닫힘(NC)':(i.state==='NO'?'열림(NO)':''), i.dir,
+    [i.note,i.warn?'⚠ '+i.warn:''].filter(Boolean).join(' / ')]);
+  if(warnings&&warnings.length){
+    rows.push([]);
+    rows.push(['[자동 검증]']);
+    for(const w of warnings) rows.push(['',w]);
+  }
   // 기계실 물량 (개산)
   const mr=calcMR();
   if(mr.items.length){
@@ -1697,6 +2051,21 @@ function setBuilding(k,v){
   if(k==='floors')v=Math.round(v);
   S.building[k]=v;renderAll();
 }
+function setInlet(k,v){ IN()[k]=v; renderAll(); }
+function setPkg(k,v){ PKG()[k]=v; renderAll(); }
+// 저장본 보정 — 구 버전에는 inlet·pumpPkg 가 없다
+function normalizeState(){
+  S.inlet=Object.assign(inletDefaults(),S.inlet||{});
+  S.pumpPkg=Object.assign(pkgDefaults(),S.pumpPkg||{});
+  if(S.building&&S.building.tankHeight==null)S.building.tankHeight=3;
+  if(S.pump){
+    if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
+    if(!S.pump.inletPipe)S.pump.inletPipe='50A';
+    if(S.pump.mrLen==null)S.pump.mrLen=8;
+  }
+  if(!S.material)S.material='sts';
+  S.mr=Object.assign(mrDefaults(),S.mr||{});
+}
 
 function addGroup(){
   S.groups.push({id:uid(),name:`입상관 ${S.groups.length+1}`,pipe:'65A',prv:false,floorPipes:[],zones:[]});
@@ -1739,6 +2108,7 @@ function resetAll(){
   S.mr=mrDefaults();
   S.pump={count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8};
   S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3};
+  S.inlet=inletDefaults(); S.pumpPkg=pkgDefaults();
   S.groups=[]; _id=1;
   try{localStorage.removeItem(LS_KEY);}catch{}
   document.getElementById('projectName').value='새 프로젝트';
@@ -1760,12 +2130,7 @@ function loadJSON(e){
   r.onload=ev=>{
     try{
       Object.assign(S,JSON.parse(ev.target.result));
-      if(S.building.tankHeight==null)S.building.tankHeight=3;
-      if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
-      if(!S.pump.inletPipe)S.pump.inletPipe='50A';
-      if(!S.material)S.material='sts';
-      S.mr=Object.assign(mrDefaults(),S.mr||{});
-      if(S.pump.mrLen==null)S.pump.mrLen=8;
+      normalizeState();
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt(g.id?.slice(1));if(n>mx)mx=n;});
       _id=mx+1;
@@ -1819,12 +2184,7 @@ try{
     const d=JSON.parse(saved);
     if(d&&d.pump&&d.building){
       Object.assign(S,d);
-      if(S.building.tankHeight==null)S.building.tankHeight=3;
-      if(!S.pump.pumpPipe)S.pump.pumpPipe='65A';
-      if(!S.pump.inletPipe)S.pump.inletPipe='50A';
-      if(!S.material)S.material='sts';
-      S.mr=Object.assign(mrDefaults(),S.mr||{});
-      if(S.pump.mrLen==null)S.pump.mrLen=8;
+      normalizeState();
       let mx=0;
       (S.groups||[]).forEach(g=>{const n=parseInt((g.id||'').slice(1));if(n>mx)mx=n;});
       _id=mx+1;
