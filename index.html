@@ -158,7 +158,8 @@ let _id=1; const uid=()=>'g'+(++_id);
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 // ── 적용등급 ─────────────────────────────────────────────────────────────────
-// 기준안 KL-HV-DW-0013 / 2.pdf. 도면의 모든 기구를 일률적으로 필수로 보지 않는다.
+// 기준: IN-001 1.3.7 · IN-002
+// 기준 도면 KL-HV-DW-0013 의 모든 기구를 일률적으로 필수로 보지 않는다.
 const GRADE={DEF:'DEFAULT',CON:'CONDITIONAL',OPT:'OPTIONAL',EXC:'EXCLUDED'};
 const GRADE_LBL={DEFAULT:'기본',CONDITIONAL:'조건부',OPTIONAL:'선택',EXCLUDED:'제외'};
 const GRADE_COL={DEFAULT:'#58a6ff',CONDITIONAL:'#d29922',OPTIONAL:'#8b949e',EXCLUDED:'#6e7681'};
@@ -166,7 +167,7 @@ const GRADE_COL={DEFAULT:'#58a6ff',CONDITIONAL:'#d29922',OPTIONAL:'#8b949e',EXCL
 // ── 인입부 설정 (규칙 테이블 — 코드에 박지 않고 데이터로 둔다) ───────────────
 function inletDefaults(){
   return {
-    meter:true,           // 수도계량기 — 별도 계측 필요 시 (기준안 A-2, CONDITIONAL)
+    meter:true,           // 수도계량기 — 별도 계측 필요 시 (IN-001 1.3.7 b), CONDITIONAL)
     tankInlet:'airgap',   // 'airgap' 자유낙수 | 'submerged' 수몰 유입
     dcv:'auto',           // 'auto' | 'force'(관할 승인조건) | 'off'
     bfFrom:65,            // 버터플라이 시작 관경(A) — 회사 표준, 법정 아님
@@ -177,7 +178,8 @@ function inletDefaults(){
 }
 function IN(){ return S.inlet||(S.inlet=inletDefaults()); }
 
-// ── 수도법 시행규칙 [별표 3의2] 저수조의 설치기준 (제9조의2 관련) ───────────
+// ── 저수조의 설치기준 ────────────────────────────────────────────────────────
+// 기준: IN-002 — 수도법 시행규칙 [별표 3의2] 저수조의 설치기준 (제9조의2 관련)
 // 첨부본 <개정 2022. 7. 12.>. 2012 신설판은 구획·구조가 제5호에 묶여 14호였고
 // 2022 개정에서 제5호(구획)/제6호(구조)로 갈라지며 뒤 번호가 한 칸씩 밀렸다.
 const LAW='수도법 시행규칙 별표 3의2';
@@ -208,14 +210,14 @@ function tankCompart(){
   if(t.compart!=='auto') return Math.max(1,Math.min(4,+t.compart||1));
   return (+t.volume||0)>TANK_SPLIT_TON?2:1;
 }
-// 펌프 패키지(스키드) 포함 품목 — 켜면 외부 수량에서 빼 중복 산출을 막는다 (기준안 C-5·D-3)
+// 펌프 패키지(스키드) 포함 품목 — 켜면 외부 수량에서 빼 중복 산출을 막는다 (IN-001 1.3.9 b)
 function pkgDefaults(){ return {fj:false,cv:false,gv:false,pg:false}; }
 function PKG(){ return S.pumpPkg||(S.pumpPkg=pkgDefaults()); }
 
 // 차단밸브 종류 — 관경으로 갈린다. 경계는 회사 표준이며 법정이 아니다.
 //   ≤50A 게이트/볼 · ≥65A 버터플라이 (공공 시방에서 반복되는 구분)
 //   발주처에 따라 80A·100A 부터 적용하는 사례가 있어 프로젝트별로 바꿀 수 있게 둔다.
-// 기준: IN-001 1.3.6 「차단, 대구경 → 버터플라이밸브 | 설치 공간, 중량, 가격」
+// 기준: IN-001 1.3.7 d) — 50A 이하 게이트/볼, 65A 이상 버터플라이(125A 이상 기어식)
 const BF_OPTIONS=[50,65,80,100];
 function pipeMM(p){ return parseInt(p)||0; }
 function shutoffType(pipe){
@@ -228,7 +230,7 @@ function shutoffSpec(pipe,use){
   return t==='버터플라이밸브'?`버터플라이밸브(${bfOperator(pipe)}, ${use})`:`게이트밸브(${use})`;
 }
 
-// 더블체크밸브 적용 판정 — 기준안 A-4
+// 더블체크밸브 적용 판정 — 기준: IN-001 1.3.7 c)
 // 자유낙수(air gap)로만 유입되고 가압계통과 분리되면 역사이펀 경로가 없어 적용하지 않는다.
 function dcvDecision(){
   const I=IN();
@@ -409,7 +411,7 @@ function calcValves(){
       grade:opt.grade||GRADE.DEF, cond:opt.cond||'', state:opt.state||'',
       dir:opt.dir||'', pkg:!!opt.pkg, warn:opt.warn||''});
   }
-  // 적용하지 않기로 판정된 품목도 사유와 함께 남긴다 (기준안 화면기능 7 — 기준 구성과의 차이 비교)
+  // 적용하지 않기로 판정된 품목도 사유와 함께 남긴다 (기준 구성과의 차이를 한눈에 비교하기 위함)
   function skip(pos,name,pipe,why){
     list.push({no:no++,pos,name,spec:'— 미적용 —',pipe,qty:0,note:'',mat:'-',
       grade:GRADE.EXC, cond:why, state:'', dir:'', pkg:false, warn:''});
@@ -418,7 +420,7 @@ function calcValves(){
   const SHUT=shutoffType(inletPipe), SHUT_OUT=shutoffType(pumpPipe);
 
   if(isBst){
-    // ── 시상수 인입부 — 기준안 A. 도면 순서: GV → WM → ST → GV → DCV → PG → FJ → LCV세트
+    // ── 시상수 인입부 — 기준: IN-001 1.3.7. 순서: GV → WM → ST → GV → DCV → PG → FJ → LCV세트
     add('수도 인입부',SHUT,shutoffSpec(inletPipe,'인입차단'),inletPipe,1,'시상수 인입 차단 — 도면 FROM CIVIL PIPE 직후',
       {grade:GRADE.DEF,cond:'유지관리용 차단'});
     if(I.meter)
@@ -426,13 +428,13 @@ function calcValves(){
         '관할 수도사업자 계량기와 별도',{grade:GRADE.CON,cond:'건물 내부에서 별도 사용량 계측이 필요함'});
     else
       skip('수도 인입부','수도계량기',inletPipe,'별도 계측이 필요하지 않음 — 사용자 제외');
-    // 기준안 A-3 — 보호 대상 기기(WM·LCV) 전단에 둔다. 청소 분해공간·드레인 방향 고려.
+    // 기준: IN-001 1.3.7 a) — 보호 대상 기기(WM·LCV) 전단. 스트레이너 앞에 차단밸브를 둔다.
     // ※ 도면 A 의 스트레이너와 LCV 세트 B 의 스트레이너가 같은 것인지 주기 확인 필요. 지금은 1개로 본다.
     add('수도 인입부','Y형 스트레이너',`Y형 스트레이너(${I.meter?'계량기·':''}LCV 보호)`,inletPipe,1,
       '보호 대상 기기 전단 — 청소 분해공간·드레인 방향 확보',{grade:GRADE.DEF,dir:'유입 → 저수조'});
     add('수도 인입부',SHUT,shutoffSpec(inletPipe,'기기 전단 차단'),inletPipe,1,
       '스트레이너 청소·DCV 정비 시 격리',{grade:GRADE.DEF,cond:'유지관리용 차단'});
-    // 기준안 A-4 — 자유낙수면 적용하지 않는다
+    // 기준: IN-001 1.3.7 c) · IN-002 4.1 — 자유낙수면 역류 경로가 없어 적용하지 않는다
     if(dcv.on)
       add('수도 인입부','더블체크밸브','더블체크밸브 어셈블리(역류방지)',inletPipe,1,
         '단순 체크밸브 1개와 구분 — 중간실 배출형',
@@ -442,11 +444,11 @@ function calcValves(){
     if(I.pg)
       add('수도 인입부','압력계','압력계(인입압, 게이지콕 포함)',inletPipe,1,
         '인입압 확인 — 게이지콕(소형 차단밸브) 포함',{grade:GRADE.DEF});
-    // 기준안 B-5 — 도면의 「게이트밸브 이후 플렉시블 조인트」를 기본값으로 반영
+    // 기준: IN-001 1.3.7 a) — 도면 주기 6 「게이트밸브 이후 플렉시블 조인트」
     add('수도 인입부','플렉시블조인트','플렉시블조인트(차단밸브 이후)',inletPipe,1,
       '도면 기준 위치 — 부동침하·진동 변위 흡수. 학회 3.3.6',{grade:GRADE.DEF});
 
-    // ── LCV 세트 — 기준안 B ──
+    // ── LCV 세트 — 기준: IN-001 1.3.8 ──
     add('LCV 세트','Y형 스트레이너','Y형 스트레이너(LCV 전단)',inletPipe,1,
       'LCV 파일럿·시트 이물질 보호',{grade:GRADE.DEF,dir:'유입 → LCV'});
     add('LCV 세트','수격방지기','수격방지기(LCV용)','20A',1,
@@ -455,7 +457,7 @@ function calcValves(){
       '저수조 인입 LCV – 수위 차면 자동 차단',{grade:GRADE.DEF});
     add('LCV 세트',SHUT,shutoffSpec(inletPipe,'LCV 전·후 차단'),inletPipe,2,
       'LCV 교체·점검 시 격리용',{grade:GRADE.DEF,cond:'밸브 정비·교체'});
-    // 기준안 B-4 — 첨부 기준에 따라 기본 적용 (저수조 하부 청소용 배수밸브와 별개)
+    // 기준: IN-002 4.3 — 저수조 하부 침전찌꺼기 배출구(제4호)와 목적·위치가 다른 별개 항목
     add('LCV 세트','배수밸브','배수밸브(유입배관 배수용)','25A',1,
       '단수 후 통수 시 초기 오수·이물질을 저수조로 보내지 않고 버린다 · 도면 주기 5',
       {grade:GRADE.DEF,cond:lawRef('inDrain')});
@@ -480,7 +482,7 @@ function calcValves(){
       {grade:GRADE.OPT,cond:'지중관이 건물로 들어오는 자리의 부등침하 대비'});
     // 기준: WS-006 Rule 9 — 25A 면 100 ㎥ 를 19 시간에 채운다. LCV 고장 시 밤새 복구된다.
     //   20A 는 30 시간이라 하루를 넘겨 백업 노릇을 못 한다.
-    // ── 저수조 구획 — 기준안 C-1·2 ──
+    // ── 저수조 구획 — 기준: IN-002 4.2 ──
     const nT=tankCompart(), tv=+TK().volume||0;
     const cLbl=i=>nT>1?`${i+1}번 칸`:'저수조';
     if(nT>1){
@@ -520,7 +522,7 @@ function calcValves(){
     else
       skip('소화용수 연결부','역류방지장치',pumpPipe,
         '생활용수조와 소화수조가 분리되어 연결이 없음 — 겸용 저수조면 '+LAW+' 제15호로 필수');
-    // 기준안 E-1 — 오버플로관에는 원칙적으로 차단밸브를 설치하지 않는다
+    // 기준: IN-002 6 Rule 6 — 오버플로관에는 차단밸브를 두지 않는다
     skip('저수조 오버플로','차단밸브','—',
       `오버플로관에는 차단밸브를 두지 않는다 — 잠기면 월류 경로가 막힌다 (${nT>1?`칸마다 O.F ${nT}개소`:'O.F 1개소'}). 스크린은 ${LAW} 제${TANK_LAW.screen.no}호`);
     // 기준: WS-006 Rule 8 — 저수조는 만수 시 무게로 가라앉고 배관은 안 가라앉는다
@@ -530,8 +532,8 @@ function calcValves(){
       '수조 침하 변위 흡수 – 학회 3.3.6',{grade:GRADE.DEF});
     add('저수조 출구',SHUT_OUT,shutoffSpec(pumpPipe,nT>1?'칸별 유출 차단':'출구공통'),pumpPipe,nT,
       nT>1?`칸마다 1개 — 한 칸 청소 중 다른 칸으로 급수 유지`:'저수조 출구',
-      {grade:GRADE.DEF,cond:nT>1?'각 칸·각 유출구를 개별 차단할 수 있어야 한다 (기준안 C-1)':'유지관리용 차단'});
-    // 기준안 C-5 · D-3 — 펌프 패키지(스키드)에 포함된 품목은 외부 수량에서 뺀다
+      {grade:GRADE.DEF,cond:nT>1?'각 칸·각 유출구를 개별 차단할 수 있어야 한다 (IN-002 Rule 3)':'유지관리용 차단'});
+    // 기준: IN-001 1.3.9 b) — 패키지에 들어 있는 것을 또 세지 않는다
     const pkgNote='펌프 패키지(스키드) 포함 — 외부 중복 산출 방지';
     const pk=(on,pos,name,spec,pipe,qty,note,opt)=>{
       if(on) skip(pos,name,pipe,pkgNote); else add(pos,name,spec,pipe,qty,note,opt);
@@ -542,8 +544,8 @@ function calcValves(){
       {grade:GRADE.DEF,dir:'수조 → 펌프'});
     pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,P.count,`×${P.count}대`,
       {grade:GRADE.DEF});
-    // 기준안 C-3 — 흡입측에 불필요한 체크밸브·저항기구를 자동으로 추가하지 않는다
-    skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (기준안 C-3)');
+    // 기준: IN-001 1.3.9 a) — 흡입측에 체크밸브를 두지 않는다 (NPSH 여유)
+    skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (IN-001 1.3.9 a)');
     pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,P.count,`×${P.count}대`,
       {grade:GRADE.DEF});
     pk(PK.cv,'펌프 토출측','체크밸브','체크밸브',pumpPipe,P.count,`×${P.count}대 – 게이트밸브 안쪽(펌프측)`,
@@ -554,13 +556,13 @@ function calcValves(){
     add('펌프 토출측','수격방지기','수격방지기',pumpPipe,P.count,`×${P.count}대 – 첵밸브 상류측(펌프측). 첵밸브 파손 방지`);
     pk(PK.gv,'펌프 토출측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대 – 체크밸브 점검용 차단`,
       {grade:GRADE.DEF,cond:'개별 펌프의 정비·교체'});
-    // 기준안 D-4 — 펌프 토출압과 공통 헤더압을 구분해 확인한다.
+    // 기준: IN-001 1.3.9 — 펌프 토출압과 공통 헤더압을 구분해 확인한다.
     //   기준: IN-001 1.3.4 「압력계를 양쪽에 둔다 — 토출과 흡입의 차가 실양정이다」
     pk(PK.pg,'펌프 토출측','압력계','압력계(펌프 토출압, 게이지콕 포함)',pumpPipe,P.count,
       `×${P.count}대 – 흡입압과의 차가 실양정`,{grade:GRADE.DEF});
     add('토출 헤더','압력계','압력계(공통 헤더압, 게이지콕 포함)',P.mainPipe,1,'계통 송출압 확인',{grade:GRADE.DEF});
     add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정',{grade:GRADE.DEF});
-    // 기준안 A-4 — 시상수와 가압급수계통이 직접 연결되는 자리. 유입구 방식과 무관하게 역류 경로가 생긴다.
+    // 기준: IN-001 1.3.7 c) — 시수와 가압계통의 교차연결. 유입 방식과 무관하게 역류 경로가 생긴다.
     if(I.emerBypass){
       add('비상 바이패스',SHUT,shutoffSpec(inletPipe,'시수직결 비상급수'),inletPipe,2,
         '시수 인입관→토출 주관 직결',{grade:GRADE.OPT,state:'NC',
@@ -569,7 +571,7 @@ function calcValves(){
       add('비상 바이패스','더블체크밸브','더블체크밸브 어셈블리(역류방지)',inletPipe,1,
         '시수→토출 방향만 허용 — 펌프수의 시수 본관 역가압 방지',
         {grade:GRADE.CON,dir:'시수 → 토출 주관',
-        cond:'시상수와 가압급수계통이 직접 연결됨 (기준안 A-4)',
+        cond:'시상수와 가압급수계통이 직접 연결됨 (IN-001 1.3.7 c)',
         warn:'단순 체크밸브 1개로는 교차연결 방호가 되지 않는다 — DC-001'});
     } else {
       skip('비상 바이패스',SHUT,inletPipe,'사용자가 비상 바이패스를 두지 않음');
@@ -651,7 +653,7 @@ function calcValves(){
   return {list,summary,warnings:validateValves(list)};
 }
 
-// ── 자동 검증 — 기준안 4 ─────────────────────────────────────────────────────
+// ── 자동 검증 — 기준: IN-002 8 (Design Check Point) ─────────────────────────
 function validateValves(list){
   const W=[];
   const on=(name,pos)=>list.some(i=>i.grade!==GRADE.EXC&&i.name===name&&(!pos||i.pos.includes(pos)));
@@ -680,7 +682,7 @@ function validateValves(list){
     }
     if(list.filter(i=>i.grade!==GRADE.EXC&&i.name==='수도계량기').reduce((s,i)=>s+i.qty,0)>1)
       W.push('수도계량기가 중복 설치되어 있습니다.');
-    // 기준안 C-1·2, 자동검증 — 저수조 구획과 유지관리 중 단수
+    // 기준: IN-002 4.2 · 8 — 저수조 구획과 유지관리 중 단수
     const nT=tankCompart(), tv=+TK().volume||0;
     if(nT<=1){
       if(tv>TANK_SPLIT_TON)
@@ -834,7 +836,7 @@ function renderSettings(){
     </div>
   </div>`;
 
-  // ── 인입부 구성 (기준안 KL-HV-DW-0013) ──
+  // ── 인입부 구성 — 기준: IN-001 1.3.7 ──
   if(S.system==='booster'){
     const I=IN(), PK=PKG(), dcv=dcvDecision();
     h+=`<div class="section">
@@ -1346,7 +1348,7 @@ function symBF(x,y,s=10,lbl='BF'){
     ${svgText(x+s+9,y+4,lbl,SC.gv,8,'start')}
   </g>`;
 }
-// 인입부 차단밸브 기호 — 사용자 설정에 따라 기호·명칭이 함께 바뀐다 (기준안 A-6)
+// 인입부 차단밸브 기호 — 사용자 설정에 따라 기호·명칭이 함께 바뀐다 (IN-001 1.3.7 d)
 function symShut(x,y,s=10,pipe){
   const p=pipe||S.pump.inletPipe||'50A';
   return shutoffType(p)==='버터플라이밸브'?symBF(x,y,s,'BF'):symGV(x,y,s,'GV');
@@ -1381,7 +1383,7 @@ function renderDiagram(){
     return base+i*groupSpacing;
   });
 
-  // Y layout — 인입부는 구성(수도계량기·DCV·PG)에 따라 동적으로 쌓는다 (기준안 A)
+  // Y layout — 인입부는 구성(수도계량기·DCV·PG)에 따라 동적으로 쌓는다 (IN-001 1.3.7)
   const INLET_Y=40;
   const _I=IN(), _dcv=dcvDecision();
   const inletStack=[];
@@ -1459,7 +1461,7 @@ function renderDiagram(){
     s+=symLCV(CX,LCV_Y);
     s+=svgLine(CX,LCV_Y+11,CX,LCV_BOT);
     s+=symShut(CX,LCV_BOT-22,7);
-    // LCV 후단 배수밸브 — 기준안 B-4
+    // 유입배관 배수용 밸브 — 기준: IN-002 4.3
     s+=svgLine(CX,LCV_BOT-6,CX-30,LCV_BOT-6);
     s+=symDV(CX-42,LCV_BOT-6,'DV');
     s+=svgText(CX-56,LCV_BOT+6,'LCV 후단 배수',SC.dv,7,'end');
@@ -1485,7 +1487,7 @@ function renderDiagram(){
 
   const tankLbl=isBst?'저수조':'고가수조';
   const outPipe=isBst?pumpPipe:P.mainPipe;
-  // 구획하면 LCV 세트 이후 인입관이 칸 수만큼 갈라진다 (기준안 C-1·2)
+  // 구획하면 LCV 세트 이후 인입관이 칸 수만큼 갈라진다 (IN-002 4.2)
   s+=symTank(CX,TANK_Y,tankW,TANK_H,tankLbl+(nTank>1?` (${nTank}칸)`:''));
   for(let i=1;i<nTank;i++){ // 칸막이
     const dx=CX-tankW/2+i*(tankW/nTank);
@@ -1571,7 +1573,7 @@ function renderDiagram(){
     s+=symPT(CX+60,HEADER_Y-15);
 
     // 비상 바이패스 — 시수 인입관에서 분기, 저수조·펌프를 우회해 토출 주관에 직결
-    // 기준안 A-4: 시수와 가압계통의 교차연결 지점이므로 더블체크밸브를 둔다
+    // 기준: IN-001 1.3.7 c) — 시수와 가압계통의 교차연결 지점이므로 더블체크밸브를 둔다
     if(_I.emerBypass){
       const ebX=Math.max(pumpXs[nPump-1]+70,CX+140);
       const bpD='stroke-dasharray="6,3" stroke-opacity=".7"';
