@@ -173,6 +173,7 @@ function inletDefaults(){
     bfFrom:65,            // 버터플라이 시작 관경(A) — 회사 표준, 법정 아님
     pg:true,              // 인입압 압력계 (게이지콕 포함)
     lcvBypass:true,       // LCV 바이패스 (OPTIONAL, 평상시 닫힘)
+    prvBypass:false,      // PRV 바이패스 — 기본 제외 (IN-001 1.3.10.3)
     emerBypass:true       // 비상 바이패스(시수직결)
   };
 }
@@ -380,6 +381,7 @@ function valveMat(name,pipe){
     case '역류방지장치':
       return big?`주철 감압식(RPZ)/DCVA ${rating}`:`청동/STS ${rating}`;
     case '수위 경보장치': case '이상수위 제어': return '전극봉식 또는 플로트식 레벨스위치';
+    case '릴리프밸브': return preset==='general'?`청동 스프링식 ${rating}`:`STS304 스프링식 ${rating}`;
     case '경보 수신반':   return '벽부형 경보반 (관리실)';
     case '세목 스크린':   return 'STS304 메시 (녹슬지 않는 재질)';
     case '감압밸브':
@@ -616,8 +618,30 @@ function calcValves(){
       add(`${g.name} PRV`,'감압밸브',`감압밸브(PRV)`,g.pipe,1,`설정압 ${B.prvPressure}kgf/cm²`);
       add(`${g.name} PRV`,'압력계','압력계(2차압)',g.pipe,1,'PRV 후');
       add(`${g.name} PRV 출구`,'게이트밸브','게이트밸브(출구차단)',g.pipe,1,'PRV 출구');
-      add(`${g.name} 바이패스`,'게이트밸브','게이트밸브(바이패스)',g.pipe,2,'바이패스 전·후');
-      add(`${g.name} 바이패스`,'글로브밸브','글로브밸브(유량조절)',g.pipe,1,'바이패스 조절');
+      // 기준: IN-001 1.3.10.3 — 감압밸브를 우회하는 단순 바이패스는 기본 구성에서 뺀다.
+      //   열면 감압되지 않은 물이 하류로 간다. 차단밸브 바이패스와 성질이 다르다.
+      //   정비 중 급수를 이어야 하면 바이패스가 아니라 병렬 2열 PRV 로 한다.
+      if(I.prvBypass){
+        add(`${g.name} 바이패스`,SHUT,shutoffSpec(g.pipe,'PRV 바이패스 전·후'),g.pipe,2,
+          '감압밸브 정비 중 임시 급수',{grade:GRADE.OPT,state:'NC',
+          cond:'단수가 곤란하나 병렬 2열을 두지 못하는 경우',
+          warn:'열면 감압되지 않은 상류압이 그대로 하류로 간다. 잠금·봉인하고 관리자 감시 아래 임시로만 연다'});
+        add(`${g.name} 바이패스`,'글로브밸브','글로브밸브(유량조절)',g.pipe,1,
+          '바이패스 수동 조절',{grade:GRADE.OPT,state:'NC',
+          warn:'조절용이지 상시 개방용이 아니다'});
+      } else {
+        skip(`${g.name} 바이패스`,SHUT,g.pipe,
+          '감압밸브 우회 바이패스는 기본 구성에서 제외 (IN-001 1.3.10.3). 정비 중 급수가 필요하면 병렬 2열 PRV 로 한다');
+      }
+      // 기준: IN-001 1.3.10.2 a) — 하류 허용압이 상류 최대압보다 낮으면 릴리프밸브를 둔다
+      {
+        const up=groupMaxPressure(g);
+        if(up!=null&&up>B.targetPressure)
+          add(`${g.name} PRV 하류`,'릴리프밸브','릴리프밸브(하류 과압 방출)',g.pipe,1,
+            `PRV 고장 시 하류 보호 — 상류 ${up.toFixed(1)} > 적정압 ${B.targetPressure} kgf/cm²`,
+            {grade:GRADE.CON,cond:'하류 기구의 허용압력이 상류 최대압력보다 낮음',
+             warn:'감압밸브는 열린 채로도 고장난다. 그때 하류가 상류압을 그대로 받는다'});
+      }
     }
     add(`${g.name} 최상부`,'공기빼기밸브','자동공기빼기밸브','15A',1,'입상관 최상부');
     add(`${g.name} 최하부`,'배수밸브','배수밸브','25A',1,'입상관 최하부');
@@ -643,7 +667,7 @@ function calcValves(){
   // Summary — 미적용(EXCLUDED) 품목은 수량산출에서 뺀다
   const names=['게이트밸브','버터플라이밸브','볼밸브','체크밸브','더블체크밸브','역류방지장치','감압밸브',
     '글로브밸브','Y형 스트레이너','공기빼기밸브','배수밸브','압력계','압력탱크','수격방지기','신축이음',
-    '플렉시블조인트','유량계','수도계량기','볼탭','수위조절밸브(LCV)','수위 경보장치','이상수위 제어','경보 수신반','세목 스크린'];
+    '플렉시블조인트','유량계','수도계량기','볼탭','수위조절밸브(LCV)','수위 경보장치','이상수위 제어','경보 수신반','세목 스크린','릴리프밸브'];
   const summary={};
   for(const n of names) summary[n]=0;
   for(const item of list){
@@ -933,6 +957,16 @@ function renderSettings(){
           ${[1,2,3,4].map(n=>`<option value="${n}"${TK().compart===n?' selected':''}>${n}칸 지정</option>`).join('')}
         </select>
         <span style="font-size:11px;color:var(--text2)">구획하면 LCV 세트 이후 인입관이 칸 수만큼 갈라집니다</span>
+      </div>
+      <div class="form-row">
+        <span class="form-label">PRV 바이패스</span>
+        <select onchange="setInlet('prvBypass',this.value==='1')">
+          <option value="0"${!IN().prvBypass?' selected':''}>제외 (기본) — 정비 시 병렬 2열 권장</option>
+          <option value="1"${IN().prvBypass?' selected':''}>설치 (평상시 닫힘·잠금)</option>
+        </select>
+        <span style="font-size:11px;color:${IN().prvBypass?'var(--warn)':'var(--text2)'}">
+          ${IN().prvBypass?'⚠ 열면 감압되지 않은 상류압이 하류로 갑니다':'감압밸브 우회는 기본 제외 (IN-001 1.3.10.3)'}
+        </span>
       </div>
       <div class="form-row">
         <span class="form-label">비상 바이패스</span>
@@ -1748,7 +1782,7 @@ function renderValveList(){
     '글로브밸브':SC.globe,'Y형 스트레이너':SC.st,'공기빼기밸브':SC.av,'배수밸브':SC.dv,
     '압력계':SC.pg,'압력탱크':SC.pg,'수격방지기':SC.wh,'신축이음':SC.ex,'플렉시블조인트':SC.fj,
     '유량계':SC.cv,'수도계량기':SC.cv,'볼탭':SC.gv,'수위조절밸브(LCV)':SC.lcv,
-    '역류방지장치':SC.cv,'수위 경보장치':SC.lcv,'이상수위 제어':SC.lcv,'경보 수신반':SC.lcv,'세목 스크린':SC.st};
+    '역류방지장치':SC.cv,'릴리프밸브':SC.prv,'수위 경보장치':SC.lcv,'이상수위 제어':SC.lcv,'경보 수신반':SC.lcv,'세목 스크린':SC.st};
 
   const prvGroups=S.groups.filter(g=>g.prv);
   let h='';
