@@ -808,6 +808,14 @@ function renderSettings(){
     <div class="form-row">
       <span class="form-label">토출유량 (L/min)</span>
       <input class="form-inp sm" type="number" value="${P.flow}" onchange="setPump('flow',+this.value)">
+      <span style="font-size:11px;color:var(--text2)">유닛 <strong>전체</strong> 유량 = 순간최대예상급수량 (KDS 31 30 15 4.6.2)</span>
+    </div>
+    <div class="form-row" style="align-items:flex-start">
+      <span class="form-label"></span>
+      <span style="font-size:11px;color:var(--warn);line-height:1.6">
+        ⚠ 시간평균에 첨두배수를 곱한 값(Qh/60 × 3)을 그대로 넣지 마세요.
+        세정밸브가 있는 계통에서는 대변기 1대 요구유량(96 L/min)에도 못 미칩니다 — AC-033 33.3.1.1
+      </span>
     </div>
     <div class="form-row">
       <span class="form-label">펌프 접속 관경</span>
