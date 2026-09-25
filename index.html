@@ -813,9 +813,9 @@ function renderSettings(){
     <div class="form-row" style="align-items:flex-start">
       <span class="form-label"></span>
       <span style="font-size:11px;color:var(--text2);line-height:1.7">
-        <strong>펌프 설계유량 = 학회 WSFU 순간최대예상급수량 + 연속사용 부하</strong> — AC-033 33.3.1.3<br>
+        <strong>Q(펌프) = Q(WSFU · 일반기구만) + Σ(기구유량 × 동시운전 대수)</strong> — AC-033 33.3.1.3<br>
         · 관경 선정용 회사 유량(동시사용계수 방식)을 그대로 넣지 않습니다. 그 값은 관에서만 검증됐습니다<br>
-        · 연속사용 기구(연속 샤워·주방 연속급탕·세차·호스)는 동시사용률로 줄이지 말고 <strong>따로 더합니다</strong><br>
+        · 연속사용 기구는 <strong>WSFU 집계에서 빼고</strong> 따로 더합니다. 빼지 않으면 두 번 잡힙니다<br>
         <span style="color:var(--warn)">⚠ 시간평균에 첨두배수를 곱한 값(Qh/60 × 3)은 쓰지 않습니다. 세정밸브 계통에서는 대변기 1대(96 L/min)에도 못 미칩니다</span>
       </span>
     </div>
