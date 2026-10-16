@@ -258,7 +258,18 @@ const S={
 let activeTab=0;
 
 // ── Calc ─────────────────────────────────────────────────────────────────────
-const MIN_PRESSURE=0.7; // 일반 수전 최소 필요압 kgf/cm² (세정밸브는 1.0)
+const MIN_PRESSURE=0.7; // (구) 공통 판정값 — 2026-10-16 폐지, 참고용으로만 남김
+// 기준: 통합기준 U11 (토론 D07·D14·D15) — 판정은 kPa, 기구별 최저 필요압(세정밸브 100 · 샤워 70 · 그 외 55).
+//   입상관마다 말단 기구의 필요압(reqKPa)을 쓰고, 모르면 세정밸브 기준 100 kPa 로 본다(안전측).
+const KGF2KPA=98.0665;
+const REQ_OPTS=[[100,'세정밸브 100 kPa'],[70,'샤워 70 kPa'],[55,'일반 55 kPa']];
+function groupReqKPa(g){ return +g.reqKPa||100; }
+function floorReqKPa(f){
+  let r=0;
+  for(const g of S.groups){ const a=+g.fromFloor||1, b=+g.toFloor||S.building.floors; if(f>=Math.min(a,b)&&f<=Math.max(a,b)) r=Math.max(r,groupReqKPa(g)); }
+  return r||55;
+}
+function supplySet(){ return !!S.pump.pressureSet||S.system==='gravity'; }   // D15 — 공급압이 프로젝트 값으로 입력됐는지
 function floorPressure(floor){
   const B=S.building;
   if(S.system==='gravity'){
@@ -280,13 +291,16 @@ function groupMaxPressure(g){
   return floorPressure(lo);
 }
 
-// ── 마찰손실 (Hazen-Williams, STS C=150) ────────────────────────────────────
-const DIA={'15A':.016,'20A':.021,'25A':.027,'32A':.036,'40A':.041,'50A':.053,'65A':.066,'80A':.078,'100A':.102,'125A':.127,'150A':.151};
+// ── 마찰손실 (Hazen-Williams, STS304 C=140) ─────────────────────────────────
+// 기준: 통합기준 U11·U33 (토론 D08·D11) — 실제 안지름(m). 50A 이하 일반배관용 STS304(JIS G 3448), 65A 이상 Sch10S(JIS G 3459).
+//   ⚠ KS D 3595·3576 원문 대조 미확정.
+const DIA={'15A':.01428,'20A':.02022,'25A':.02658,'32A':.0316,'40A':.0403,'50A':.0462,'65A':.0703,'80A':.0831,'100A':.1083,'125A':.133,'150A':.1584};
+const HW_C=140;
 // 밸브 L/D 상당길이 계수 (완전개방 기준)
 const LDV={'볼밸브':3,'게이트밸브':8,'체크밸브':135,'Y형 스트레이너':250,'글로브밸브':340,'유량계':45};
 function hwR(QLpm,Dm){ // 단위 마찰손실 (m/m)
   const Q=QLpm/60000; // m³/s
-  return 10.666*Math.pow(Q,1.85)/(Math.pow(150,1.85)*Math.pow(Dm,4.87));
+  return 10.666*Math.pow(Q,1.85)/(Math.pow(HW_C,1.85)*Math.pow(Dm,4.87));
 }
 function groupFriction(g){
   const B=S.building,P=S.pump;
@@ -297,24 +311,25 @@ function groupFriction(g){
   const Lv=Math.max(0,(hi-1)*B.floorHeight); // 수직: 담당층 자동
   const Lh=+g.horizLen||0;
   // 경로상 밸브 상당길이: 분기BV + 층별주관BV + 화장실BV (+PRV 전 GV×2, 스트레이너)
-  let ld=LDV['볼밸브']*3;
-  if(g.prv) ld+=LDV['게이트밸브']*2+LDV['Y형 스트레이너'];
-  const Le=ld*D;
-  const Lfit=0.2*(Lv+Lh); // 엘보·티 개산(직관장 20%)
-  const hf=hwR(Q,D)*(Lv+Lh+Le+Lfit); // m
+  // 기준: 통합기준 U11 (토론 D13) — 경로 미확정 예비: 직관 × 1.4 하나로 부속·밸브를 덮는다(밸브 L/D 를 따로 더하지 않음).
+  //   손실 큰 주요 장치(PRV·스트레이너·유량계 등)는 제조사 손실(kPa)을 따로 넣는다. 경로 확정 후 실제 손실로 교체.
+  const Le=0;
+  const Lfit=0.4*(Lv+Lh);
+  const devM=(+g.devLossKPa||0)/9.81;
+  const hf=hwR(Q,D)*(Lv+Lh+Lfit)+devM; // m
   // 기계실 구간(부스터·비PRV만 — PRV는 2차압으로 리셋되므로 이전 손실 무관)
   let hfMr=0;
   if(S.system==='booster'&&!g.prv){
     const Dm=DIA[P.mainPipe]||.102;
-    const LeM=(LDV['체크밸브']+LDV['게이트밸브']+LDV['유량계'])*Dm;
     const Lm=+P.mrLen||8;
-    hfMr=hwR(+P.flow||0,Dm)*(Lm*1.2+LeM);
+    hfMr=hwR(+P.flow||0,Dm)*(Lm*1.4);   // D13 예비 ×1.4
   }
   let endP;
   if(S.system==='gravity') endP=floorPressure(hi)-hf/10;
   else if(g.prv) endP=B.prvPressure-(hi-1)*B.floorHeight*0.1-hf/10;
   else endP=P.pressure-(hi-1)*B.floorHeight*0.1-(hf+hfMr)/10;
-  return {Q,hi,Lv,Lh,Le,Lfit,hf:hf/10,hfMr:hfMr/10,endP};
+  const endKPa=endP*KGF2KPA, req=groupReqKPa(g);
+  return {Q,hi,Lv,Lh,Le,Lfit,hf:hf/10,hfMr:hfMr/10,endP,endKPa,req,ok:supplySet()?endKPa>=req:null};
 }
 
 // ── 기계실 물량 (개산) — TP: 감압밸브 세트 출구까지 ─────────────────────────
@@ -606,8 +621,10 @@ function calcValves(){
   //   단식 기준 30 m 마다 1개. 종전 「층수÷3」(층고 3.5m 면 10.5m 마다)은 근거가 없었고
   //   냉온수 기준을 급수에 쓴 것보다도 3배 촘촘했다 (2026-08-30 정정).
   const riseH=Math.max(0,((+B.floors||1)-1)*(+B.floorHeight||3.5));
-  const exCnt=Math.max(1,Math.ceil(riseH/30));
-  add('메인 수직관','신축이음','벨로우즈형 신축이음(단식)',P.mainPipe,exCnt,`입상 ${riseH.toFixed(1)}m ÷ 30m — 학회 표 5.1 (0~50℃ 단식)`);
+  // 기준: 통합기준 U14 (토론 D17) — 30m 미만 후보 0, 이후 30m마다 「후보」. 설치·구매 수량은 확정값만.
+  const exCand=Math.floor(riseH/30), exConf=+B.exConfirmed||0;
+  if(exCand>0||exConf>0) add('메인 수직관','신축이음','벨로우즈형 신축이음(단식)',P.mainPipe,exConf,`입상 ${riseH.toFixed(1)}m — 후보 ${exCand}개 (30m마다, 학회 표 5.1 0~50℃ 단식)`,
+    {grade:exConf?GRADE.DEF:GRADE.CON, cond:exConf?'확정 수량 입력됨':`검토 후보 ${exCand}개 — 필요성·위치 확정 후 수량 입력 (자동 설치 안 함)`});
 
   for(const g of G){
     add(`${g.name} 분기`,'볼밸브','볼밸브(입상관 차단)',g.pipe,1,'메인 분기');
@@ -651,16 +668,23 @@ function calcValves(){
     //   30 m 로 나눠 개수를 낸다. 층고 3.5 m 면 약 8~9 층마다이며 저층 건물은 0 개가 된다.
     const gTop=Math.max(+g.fromFloor||0,+g.toFloor||0)||B.floors;
     const riseH=Math.max(0,(gTop-1)*(+B.floorHeight||3.5));
-    const ckN=Math.floor(riseH/30);
-    if(ckN>0){
-      add(`${g.name} 입상관`,'체크밸브','체크밸브(역류에너지 분산)',g.pipe,ckN,`입상 ${riseH.toFixed(1)}m ÷ 30m — 25~30m 구간마다`);
-      add(`${g.name} 입상관`,'수격방지기','수격방지기',g.pipe,ckN,'각 첵밸브 상류측 — 첵밸브 파손 방지');
+    // 기준: 통합기준 U14 (토론 D16) — 자동 설치 금지. 30m 이상이면 검토 알림 + 참고 후보만. 확정 수량만 산출.
+    const ckN=Math.floor(riseH/30), ckConf=+g.ckConfirmed||0;
+    if(ckN>0||ckConf>0){
+      const o={grade:ckConf?GRADE.DEF:GRADE.CON, cond:ckConf?'확정 수량 입력됨':`검토 알림: 입상 ${riseH.toFixed(1)}m — 참고 후보 ${ckN}개. 필요성·위치 확정 후 수량 입력`};
+      add(`${g.name} 입상관`,'체크밸브','체크밸브(역류에너지 분산)',g.pipe,ckConf,`참고 후보 ${ckN}개 (25~30m 구간마다)`,o);
+      add(`${g.name} 입상관`,'수격방지기','수격방지기',g.pipe,ckConf,'각 첵밸브 상류측 — 첵밸브 파손 방지',o);
     }
     for(const fp of (g.floorPipes||[])){
       add(`${g.name} ${fp.floorNo}층 주관`,'볼밸브',`볼밸브(${fp.floorNo}층 주관 차단)`,fp.pipe||g.pipe,+fp.qty||1,'층별 주관');
     }
     for(const z of g.zones){
       add(`${g.name} > ${z.name}`,'볼밸브','볼밸브(화장실 차단)',z.pipe,1,'화장실 차단');
+      // 기준: 통합기준 U35 (토론 D19) — 수격방지기는 화장실당 고정 개수가 아니다. 급폐쇄원(세정밸브 등)이 있으면 검토 항목으로 띄우고
+      //   위치·용량은 급수·급탕별 지관 길이·분기·제품 선정표로 정한 확정 수량만 산출한다.
+      if((+z.fvCnt||0)>0||(+z.whaConfirmed||0)>0)
+        add(`${g.name} > ${z.name}`,'수격방지기','수격방지기(급폐쇄원)',z.pipe,+z.whaConfirmed||0,`급폐쇄원: 세정밸브 ${+z.fvCnt||0}개`,
+          {grade:(+z.whaConfirmed)?GRADE.DEF:GRADE.CON, cond:'위치·용량 검토 필요 — 급수·급탕 구분, 지관 길이·분기·제품 선정표 (화장실당 1개 고정 아님). 펌프 정지 수격은 별도'});
     }
   }
 
@@ -1011,6 +1035,11 @@ function renderSettings(){
       <span class="form-label">감압밸브 설정압 (kgf/cm²)</span>
       <input class="form-inp sm" type="number" step="0.1" value="${B.prvPressure}" onchange="setBuilding('prvPressure',+this.value)">
     </div>
+    <div class="form-row">
+      <span class="form-label">메인 신축이음 확정 수량</span>
+      <input class="form-inp sm" type="number" min="0" step="1" value="${B.exConfirmed||0}" onchange="setBuilding('exConfirmed',+this.value)">
+      <span style="font-size:11px;color:var(--text2)">후보 ${Math.floor(Math.max(0,(B.floors-1)*(B.floorHeight||3.5))/30)}개 — 검토 후 확정 수량만 입력</span>
+    </div>
   </div>`;
 
   // Material preset
@@ -1045,15 +1074,15 @@ function renderSettings(){
       <th>층</th><th>압력 (kgf/cm²)</th><th>상태</th>
     </tr></thead><tbody>`;
   for(let f=1;f<=B.floors;f++){
-    const p=floorPressure(f), over=p>B.targetPressure, low=p<MIN_PRESSURE;
+    const p=floorPressure(f), over=p>B.targetPressure, fr=floorReqKPa(f), low=p*KGF2KPA<fr;
     h+=`<tr${over?' class="floor-warn"':low?' class="floor-low"':''}>
-      <td>${f}층</td><td>${p.toFixed(2)}</td>
-      <td>${over?`<span class="warn-chip">감압필요 ▶ PRV</span>`:low?`<span class="bad-chip">압력부족 (${MIN_PRESSURE} 미만)</span>`:`<span class="ok-chip">적정</span>`}</td>
+      <td>${f}층</td><td>${p.toFixed(2)} <span style="color:var(--text2)">(${(p*KGF2KPA).toFixed(0)} kPa)</span></td>
+      <td>${!supplySet()?'<span class="warn-chip">입력 필요</span>':over?`<span class="warn-chip">감압필요 ▶ PRV</span>`:low?`<span class="bad-chip">압력부족 (${fr} kPa 미만)</span>`:`<span class="ok-chip">적정</span>`}</td>
     </tr>`;
   }
   h+=`</tbody></table>
     <div style="font-size:11px;color:var(--text2);margin-top:8px">
-      ※ 정수두만 반영한 값이며 배관 마찰손실은 별도입니다. 최소 필요압 ${MIN_PRESSURE}kgf/cm² 기준(세정밸브 사용 시 1.0 이상 확보).
+      ※ 정수두만 반영한 값이며 배관 마찰손실은 별도입니다. 필요압은 그 층을 담당하는 입상관의 말단 기구 기준(세정밸브 100 · 샤워 70 · 일반 55 kPa, 담당 없음 55).
       ${S.system==='gravity'?'<br>※ 고가수조식은 최상층부 압력 부족 시 최상층 전용 가압펌프(부스터) 설치를 검토하세요.':''}
     </div></div>`;
 
@@ -1129,7 +1158,7 @@ function renderSettings(){
   h+=`</div>`;
 
   // 마찰손실 검토
-  h+=`<div class="section"><div class="section-title">마찰손실 검토 (Hazen-Williams · STS C=150)</div>`;
+  h+=`<div class="section"><div class="section-title">마찰손실 검토 (Hazen-Williams · STS304 C=140 · 실제 안지름 · <b>예비</b>)</div>`;
   if(S.system==='booster'){
     h+=`<div class="form-row">
       <span class="form-label">기계실 배관 길이 (m)</span>
@@ -1141,21 +1170,22 @@ function renderSettings(){
     h+=`<div style="color:var(--text2);font-size:12px;padding:6px 0">입상관을 추가하고 유량을 입력하면 검토표가 나타납니다.</div></div>`;
   } else {
     h+=`<table class="floor-table"><thead><tr>
-      <th>입상관</th><th>유량 (L/min)</th><th>수평길이 (m)</th><th>수직 (자동)</th><th>밸브·부속 상당길이</th><th>마찰손실 (kgf/cm²)</th><th>말단 예상압</th><th>판정</th>
+      <th>입상관</th><th>유량 (L/min)</th><th>수평길이 (m)</th><th>말단 필요압</th><th>주요장치 손실 (kPa, 제조사)</th><th>수직 (자동)</th><th>부속 예비 (×1.4)</th><th>마찰손실 (kgf/cm²)</th><th>말단 예상압</th><th>판정</th>
     </tr></thead><tbody>`;
     for(const g of S.groups){
       const r=groupFriction(g);
       h+=`<tr>
         <td style="font-weight:600">${esc(g.name)}${g.prv?' <span style="color:var(--warn);font-size:10px">PRV</span>':''}</td>
         <td><input class="zone-inp" type="number" min="0" style="width:72px" value="${g.flowLpm||''}" placeholder="—" onchange="setGroupVal('${g.id}','flowLpm',this.value?+this.value:null)"></td>
-        <td><input class="zone-inp" type="number" min="0" style="width:60px" value="${g.horizLen||''}" placeholder="0" onchange="setGroupVal('${g.id}','horizLen',this.value?+this.value:null)"></td>`;
+        <td><input class="zone-inp" type="number" min="0" style="width:60px" value="${g.horizLen||''}" placeholder="0" onchange="setGroupVal('${g.id}','horizLen',this.value?+this.value:null)"></td>
+        <td><select class="zone-inp" onchange="setGroupVal('${g.id}','reqKPa',+this.value)">${REQ_OPTS.map(([v,l])=>`<option value="${v}"${groupReqKPa(g)===v?' selected':''}>${l}</option>`).join('')}</select></td>
+        <td><input class="zone-inp" type="number" min="0" style="width:60px" value="${g.devLossKPa||''}" placeholder="0" onchange="setGroupVal('${g.id}','devLossKPa',this.value?+this.value:null)"></td>`;
       if(r){
-        const ok=r.endP>=MIN_PRESSURE;
         h+=`<td>${r.Lv.toFixed(1)}m</td>
-          <td>${(r.Le+r.Lfit).toFixed(1)}m</td>
+          <td>${r.Lfit.toFixed(1)}m</td>
           <td>${(r.hf+r.hfMr).toFixed(2)}</td>
-          <td style="font-weight:700">${r.endP.toFixed(2)}</td>
-          <td>${ok?'<span class="ok-chip">적정</span>':'<span class="bad-chip">압력부족</span>'}</td>`;
+          <td style="font-weight:700">${r.endKPa.toFixed(0)} kPa <span style="font-weight:400;color:var(--text2)">(${r.endP.toFixed(2)} kgf/cm²)</span></td>
+          <td>${r.ok===null?'<span class="warn-chip">입력 필요</span>':r.ok?`<span class="ok-chip">적정 ≥${r.req}</span>`:`<span class="bad-chip">압력부족 &lt;${r.req} kPa</span>`}</td>`;
       } else {
         h+=`<td colspan="5" style="color:var(--text2)">← 유량 입력 시 자동 계산</td>`;
       }
@@ -1164,8 +1194,8 @@ function renderSettings(){
     h+=`</tbody></table>
     <div style="font-size:11px;color:var(--text2);margin-top:8px">
       ※ 수평길이 = 입상관 분기에서 <strong>최상층의 가장 먼 화장실</strong>까지 수평 구간 합계(최불리 경로). 입상관마다 각자의 최원 경로를 입력하세요.<br>
-      ※ 수직길이는 담당층(미입력 시 최고층)×층고로 자동. 밸브 상당길이는 경로상 밸브(분기·층주관·화장실 볼밸브, PRV 전 게이트×2·스트레이너)를 L/D 환산해 자동 반영, 엘보·티는 직관장의 20% 개산.<br>
-      ※ 말단 예상압 = 시작압 − 최고층 정수두 − 마찰손실. PRV 입상관은 2차 설정압(분기부 설치 가정) 기준${S.system==='booster'?', 비PRV 입상관은 펌프 토출압 기준(기계실 구간 손실 포함)':''}. 최소 필요압 ${MIN_PRESSURE}kgf/cm²(세정밸브 1.0).
+      ※ 수직길이는 (담당 최고층 − 1)×층고 개략(최종은 펌프 토출구/PRV 2차측 → 기구 접속점 실제 높이 차). 부속·밸브 손실은 경로 미확정 <b>예비</b>로 직관장 ×1.4 (밸브 L/D 별도 가산 안 함). 주요 장치 손실은 제조사 값을 kPa 로 입력. 경로 확정 후 실제 손실로 교체하고 1.4 를 중복 적용하지 않습니다.<br>
+      ※ 말단 예상압 = 시작압 − 최고층 정수두 − 마찰손실. PRV 입상관은 2차 설정압(분기부 설치 가정) 기준${S.system==='booster'?', 비PRV 입상관은 펌프 토출압 기준(기계실 구간 손실 포함)':''}. 판정은 입상관별 말단 필요압(kPa, 세정밸브 100·샤워 70·일반 55)과 비교합니다. ${supplySet()?'':'<b>공급압(펌프 토출압)이 프로젝트 값으로 입력되지 않아 판정은 「입력 필요」로 표시합니다. 7 kgf/cm² 는 예제값입니다.</b>'}
     </div></div>`;
   }
 
@@ -1455,7 +1485,7 @@ function renderDiagram(){
   const PUMP_DISC_Y=PUMP_SUCK_Y+COMP_OFFSETS.gv2+30;
   const HEADER_Y=isBst?PUMP_DISC_Y+70:GV2_Y+60;
 
-  const exCnt=Math.max(1,Math.ceil(Math.max(0,(B.floors-1)*(B.floorHeight||3.5))/30));   // 기준: WS-006 Rule 7
+  const exCnt=+B.exConfirmed||0;   // 기준: 통합기준 U14 (D17) — 계통도에는 확정 수량만 그린다
   const MAIN_Y=HEADER_Y+80;
   const MAIN_H=(exCnt+1)*55;
   const MAIN_END_Y=MAIN_Y+MAIN_H;
@@ -2263,11 +2293,12 @@ function exportCSV(){
 function clampNum(v,min,max,fb){v=+v;if(!isFinite(v))return fb;return Math.min(max,Math.max(min,v));}
 const NUM_RULES={
   pump:{count:[1,3,2],pressure:[0.1,30,7],flow:[1,100000,300],mrLen:[0,300,8]},
-  building:{floors:[1,120,5],floorHeight:[2,10,3.5],targetPressure:[0.5,10,3],prvPressure:[0.5,10,2.5],tankHeight:[0,30,3]}
+  building:{floors:[1,120,5],floorHeight:[2,10,3.5],exConfirmed:[0,20,0],targetPressure:[0.5,10,3],prvPressure:[0.5,10,2.5],tankHeight:[0,30,3]}
 };
 function setPump(k,v){
   const r=NUM_RULES.pump[k];
   if(r)v=clampNum(v,r[0],r[1],r[2]);
+  if(k==='pressure') S.pump.pressureSet=true;   // D15 — 사용자가 넣은 값만 판정에 쓴다
   S.pump[k]=v;renderAll();
 }
 function setBuilding(k,v){
@@ -2377,17 +2408,18 @@ function loadWaterApp(e){
   r.onload=ev=>{
     try{
       const d=JSON.parse(ev.target.result);
-      const cwGroups=d.cw?.groups||[];
-      const zones=d.zones||[];
-      S.groups=cwGroups.map(cg=>{
-        const zoneObjs=(cg.zoneIds||[]).map(zid=>{
-          const z=zones.find(z=>z.id===zid);
-          return z?{name:z.name,pipe:'40A'}:{name:zid,pipe:'40A'};
-        });
-        return {id:uid(),name:cg.name||'그룹',pipe:'65A',prv:false,floorPipes:[],zones:zoneObjs};
-      });
+      // 기준: 통합기준 U16 (토론 D18) — 관경 앱이 계산한 배관별 관경을 그대로 받는다. 65A·40A 기본값으로 덮어쓰지 않는다.
+      //   관경 앱 「저장(JSON)」의 results(계산 결과)가 있어야 한다. 없으면 관경을 임의로 채우지 않고 알린다.
+      const R=d.results&&d.results.cw;
+      if(!R){ alert('이 파일에는 관경 앱의 계산 결과(results)가 없습니다.\n관경 앱 최신판에서 다시 「저장」한 JSON 을 넣어 주세요.\n(관경을 65A·40A 로 임의 채우지 않습니다.)'); return; }
+      const A=dn=>dn?dn+'A':'';
+      S.groups=R.risers.map(rr=>({id:uid(),name:rr.name,pipe:A(rr.cwPipe),flowLpm:rr.cwQ?Math.round(rr.cwQ):null,prv:false,
+        floorPipes:rr.floors.map((f,i)=>({id:uid(),floorNo:i+1,name:f.name,pipe:A(f.cwPipe),qty:1})),
+        zones:rr.zones.map(z=>({name:z.name,pipe:A(z.cwPipe),fvCnt:z.fvCnt||0})),
+        reqKPa:rr.reqKPa||100}));
+      if(d.results.supplyKPa){ S.pump.pressure=+(d.results.supplyKPa/KGF2KPA).toFixed(2); S.pump.pressureSet=true; }
       renderAll();
-      alert(`급수앱 데이터 연동 완료.\n그룹 ${S.groups.length}개, Zone ${S.groups.reduce((s,g)=>s+g.zones.length,0)}개 불러왔습니다.\n유량·관경은 직접 확인 후 수정하세요.`);
+      alert(`관경 앱 결과 연동 완료 (${d.results.ruleVersion||''}).\n입상관 ${S.groups.length}개, 화장실 ${S.groups.reduce((s,g)=>s+g.zones.length,0)}개 — 관경은 관경 앱 계산값입니다.`);
     }catch{alert('급수앱 JSON 형식이 올바르지 않습니다.');}
   };
   r.readAsText(f); e.target.value='';
