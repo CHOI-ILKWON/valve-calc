@@ -631,9 +631,9 @@ function calcValves(){
     if(g.prv){
       add(`${g.name} PRV 입구`,'게이트밸브','게이트밸브(입구차단)',g.pipe,1,'PRV 입구');
       add(`${g.name} PRV`,'Y형 스트레이너','Y형 스트레이너(시트보호)',g.pipe,1,'감압밸브 전');
-      add(`${g.name} PRV`,'압력계','압력계(1차압)',g.pipe,1,'PRV 전');
+      add(`${g.name} PRV`,'압력계','압력계(1차압, 게이지콕 포함)',g.pipe,1,'PRV 전');
       add(`${g.name} PRV`,'감압밸브',`감압밸브(PRV)`,g.pipe,1,`설정압 ${B.prvPressure}kgf/cm²`);
-      add(`${g.name} PRV`,'압력계','압력계(2차압)',g.pipe,1,'PRV 후');
+      add(`${g.name} PRV`,'압력계','압력계(2차압, 게이지콕 포함)',g.pipe,1,'PRV 후');
       add(`${g.name} PRV 출구`,'게이트밸브','게이트밸브(출구차단)',g.pipe,1,'PRV 출구');
       // 기준: IN-001 1.3.10.3 — 감압밸브를 우회하는 단순 바이패스는 기본 구성에서 뺀다.
       //   열면 감압되지 않은 물이 하류로 간다. 차단밸브 바이패스와 성질이 다르다.
@@ -1185,7 +1185,7 @@ function renderSettings(){
           <td>${r.Lfit.toFixed(1)}m</td>
           <td>${(r.hf+r.hfMr).toFixed(2)}</td>
           <td style="font-weight:700">${r.endKPa.toFixed(0)} kPa <span style="font-weight:400;color:var(--text2)">(${r.endP.toFixed(2)} kgf/cm²)</span></td>
-          <td>${r.ok===null?'<span class="warn-chip">입력 필요</span>':r.ok?`<span class="ok-chip">적정 ≥${r.req}</span>`:`<span class="bad-chip">압력부족 &lt;${r.req} kPa</span>`}</td>`;
+          <td>${r.ok===null?'<span class="warn-chip">입력 필요</span>':r.ok?`<span class="ok-chip">적정 ≥${r.req}</span>`:`<span class="bad-chip">압력부족 &lt;${r.req} kPa</span>`}${(S.system==='booster'&&+S.pump.flow>0&&+g.flowLpm>+S.pump.flow)?`<div class="warn-chip" style="margin-top:4px" title="관경 앱 유량(회사 동시사용계수)과 펌프 유량(WSFU)은 산정 방법이 다르다">⚠ 펌프 유량 ${S.pump.flow} L/min 초과 — 관경 앱 유량은 관경 선정용</div>`:''}</td>`;
       } else {
         h+=`<td colspan="5" style="color:var(--text2)">← 유량 입력 시 자동 계산</td>`;
       }
@@ -1733,15 +1733,17 @@ function renderDiagram(){
       s+=svgLine(gx,gy+137,gx,gy+148);
       s+=symGV(gx,gy+156,8,'GV');
       s+=svgLine(gx,gy+164,gx,gy+174);
-      const bx=gx-62;
-      s+=`<line x1="${gx}" y1="${gy+8}" x2="${bx}" y2="${gy+8}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
-      s+=`<line x1="${bx}" y1="${gy+8}" x2="${bx}" y2="${gy+156}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
-      s+=`<line x1="${bx}" y1="${gy+156}" x2="${gx}" y2="${gy+156}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
-      s+=`<rect x="${bx-36}" y="${gy+73}" width="34" height="16" rx="3" fill="${TH.warnBg}" stroke="${bpCol}" stroke-width="1" opacity=".8"/>`;
-      s+=svgText(bx-19,gy+85,'바이패스',bpCol,8);
-      s+=symGV(bx,gy+28,7,'GV');
-      s+=symGlobe(bx,gy+82,'GL');
-      s+=symGV(bx,gy+136,7,'GV');
+      if(IN().prvBypass){   // 바이패스는 「설치」를 고른 경우만 그린다 (기본 제외, IN-001 1.3.10.3)
+        const bx=gx-62;
+        s+=`<line x1="${gx}" y1="${gy+8}" x2="${bx}" y2="${gy+8}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
+        s+=`<line x1="${bx}" y1="${gy+8}" x2="${bx}" y2="${gy+156}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
+        s+=`<line x1="${bx}" y1="${gy+156}" x2="${gx}" y2="${gy+156}" stroke="${bpCol}" stroke-width="1.5" ${bpDash}/>`;
+        s+=`<rect x="${bx-36}" y="${gy+73}" width="34" height="16" rx="3" fill="${TH.warnBg}" stroke="${bpCol}" stroke-width="1" opacity=".8"/>`;
+        s+=svgText(bx-19,gy+85,'바이패스',bpCol,8);
+        s+=symGV(bx,gy+28,7,'GV');
+        s+=symGlobe(bx,gy+82,'GL');
+        s+=symGV(bx,gy+136,7,'GV');
+      }
       gy+=174;
     }
 
@@ -1819,7 +1821,7 @@ function renderValveList(){
 
   if(prvGroups.length){
     h+=`<div class="warn-banner">⚠️ 감압밸브(PRV) 설치 필요 입상관: `;
-    h+=prvGroups.map(g=>`<strong>${esc(g.name)}</strong> — 분기점에 PRV + 바이패스 설치 필요`).join(' / ');
+    h+=prvGroups.map(g=>`<strong>${esc(g.name)}</strong> — 분기점에 PRV 세트 설치${IN().prvBypass?' + 바이패스(평상시 닫힘·잠금)':' (바이패스 제외 — 정비 시 병렬 2열)'}`).join(' / ');
     h+=`</div>`;
   }
   if(warnings&&warnings.length){
@@ -2006,9 +2008,9 @@ function gdPRV(){
   s+=`<path d="M210,78 l6,-5 l-12,-5 l12,-5 l-12,-5 l6,-5" fill="none" stroke="${SC.prv}" stroke-width="1.5"/>`;
   s+=svgText(210,42,'조절 스프링',SC.prv,9);
   s+=garrow(25,105,160,105,SC.av,5);
-  s+=svgText(90,78,'1차압 7.0 (고압)',SC.av,10);
+  s+=svgText(90,78,'1차압 '+(+S.pump.pressure||0).toFixed(1)+' (고압)',SC.av,10);
   s+=garrow(265,105,395,105,SC.cv,2.5);
-  s+=svgText(330,78,'2차압 2.5 (일정)',SC.cv,10);
+  s+=svgText(330,78,'2차압 '+(+S.building.prvPressure||0).toFixed(1)+' (일정)',SC.cv,10);
   s+=svgText(210,158,'2차압이 오르면 스프링·다이어프램이 밸브를 조여 압력을 일정하게 유지',TH.text2,10);
   return gwrap(420,168,s);
 }
@@ -2159,8 +2161,8 @@ function renderGuide(){
      body:`<strong>원리</strong> : 변기 물탱크와 같은 원리 — 수위가 만수위에 닿으면 볼탭·파일럿의 신호로 상수 인입 밸브가 스스로 닫힙니다.<br>저수조 수위가 만수위에 도달하면 인입수를 자동 차단합니다.<br>전동식(LCV) 또는 파일럿 볼탭식(정수위밸브)을 사용합니다.<br>고장 대비로 기계식 볼탭을 2차 백업으로 두고, LCV 전·후 차단 게이트밸브(교체 시 격리용)와 바이패스 배관(게이트밸브 1개, 평상시 닫힘)을 함께 설치합니다.<br>LCV 전단에는 Y형 스트레이너를 두어 파일럿 오리피스 막힘(→ 월류 사고)을 방지합니다.`,
      tip:'LCV 고장은 저수조 월류(넘침) 사고로 직결됩니다. 볼탭 백업과 오버플로우관 상태를 정기 점검하세요.'},
     {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',svg:gdPRV(),
-     body:`<strong>원리</strong> : 스프링과 다이어프램의 힘겨루기 — 2차측 압력이 스프링 설정값보다 오르면 밸브가 조여지고, 낮아지면 열려서 2차압이 항상 일정하게 유지됩니다.<br>1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치하며, 반드시 바이패스 배관을 함께 설치합니다.<br>전후 게이트밸브 + 바이패스 글로브밸브를 세트로 구성합니다.`,
-     tip:`설정압(현재 ${S.building.prvPressure}kgf/cm²)은 적정 급수압(${S.building.targetPressure}kgf/cm²) 이하로 설정합니다. 감압비가 3:1을 초과하면 소음·캐비테이션 우려가 있어 2단 감압을 검토하세요. 바이패스는 PRV 점검·교체 시 단수 없이 급수 유지를 위한 것입니다.`},
+     body:`<strong>원리</strong> : 스프링과 다이어프램의 힘겨루기 — 2차측 압력이 스프링 설정값보다 오르면 밸브가 조여지고, 낮아지면 열려서 2차압이 항상 일정하게 유지됩니다.<br>1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치합니다.<br>전후 게이트밸브 + Y형 스트레이너 + 1·2차 압력계를 세트로 구성합니다. 바이패스는 기본 제외입니다 — 열면 감압되지 않은 상류압이 그대로 하류로 가므로, 정비 중 급수가 필요하면 병렬 2열 PRV 로 합니다 (IN-001 1.3.10.3).`,
+     tip:`설정압(현재 ${S.building.prvPressure}kgf/cm²)은 적정 급수압(${S.building.targetPressure}kgf/cm²) 이하로 설정합니다. 감압비가 3:1을 초과하면 소음·캐비테이션 우려가 있어 2단 감압을 검토하세요. ${IN().prvBypass?'바이패스를 설치했다면 평상시 닫힘·잠금으로 관리합니다.':'바이패스를 제외했으므로 PRV 정비 중 단수 여부를 운영 측과 확인하세요.'}`},
     {icon:'○',color:SC.globe,badge:'유량조절',title:'글로브밸브',svg:gdGlobe(),
      body:`<strong>원리</strong> : 수도꼭지와 같은 구조 — 핸들을 돌려 디스크를 조금씩 내리면 틈새 크기가 변하며 유량이 조절됩니다.<br>유량의 미세 조절이 가능합니다.<br>감압밸브 바이패스 배관에서 수동 압력 조절용으로 사용합니다.<br>유체 저항이 커서 메인 배관에는 사용하지 않습니다.`,
      tip:'바이패스 운전 시 서서히 열어 하류 압력을 확인하면서 조절하세요. 급격한 개방은 하류 배관에 충격을 줄 수 있습니다.'},
@@ -2198,8 +2200,8 @@ function renderGuide(){
      body:`<strong>원리</strong> : 배관 중간의 주름관(벨로우즈)이 펌프의 떨림을 그 자리에서 흡수해 뒤쪽 배관으로 전달하지 않습니다.<br>펌프 진동과 소음의 건물 구조 전달을 차단합니다.<br>펌프 흡입·토출 연결부 양쪽에 각 1개씩 설치합니다.<br>고온 배관에는 스테인리스 벨로우즈 타입을 사용합니다.`,
      tip:'설치 방향을 반드시 확인하세요. 잘못된 방향은 진동 차단 효과가 없습니다. 고압 배관에서는 내압 사양을 확인하세요.'},
     {icon:'~',color:SC.ex,badge:'열팽창흡수',title:'신축이음 (EX)',svg:gdEX(),
-     body:`<strong>원리</strong> : 아코디언 주름 — 배관이 온도로 늘어나고 줄어드는 만큼 주름부가 접혔다 펴지며 받아줍니다.<br>배관의 열팽창 및 수축을 흡수합니다.<br>수직관 3층마다 1개씩 설치합니다 (총 ${Math.ceil(S.building.floors/3)}개).<br>벨로우즈형이 일반적이며, 급탕관에는 더 자주 설치합니다.`,
-     tip:`본 건물(${S.building.floors}층)의 신축이음은 ${Math.ceil(S.building.floors/3)}개가 필요합니다. 설치 위치는 고정 브래킷과 가이드 서포트를 함께 고려해야 합니다.`},
+     body:`<strong>원리</strong> : 아코디언 주름 — 배관이 온도로 늘어나고 줄어드는 만큼 주름부가 접혔다 펴지며 받아줍니다.<br>배관의 열팽창 및 수축을 흡수합니다.<br>수직관 입상 높이 30m마다 1개를 <b>후보</b>로 봅니다 (현재 후보 ${Math.floor(Math.max(0,(S.building.floors-1)*(S.building.floorHeight||3.5))/30)}개 · 확정 ${+S.building.exConfirmed||0}개). 필요성·위치를 검토해 확정 수량만 산출합니다.<br>벨로우즈형이 일반적이며, 급탕관에는 더 자주 설치합니다.`,
+     tip:`신축이음 수량은 ① 계통 설정의 「메인 신축이음 확정 수량」에 넣은 값만 산출됩니다. 설치 위치는 고정 브래킷과 가이드 서포트를 함께 고려해야 합니다.`},
   ];
 
   let h='';
@@ -2416,7 +2418,10 @@ function loadWaterApp(e){
       S.groups=R.risers.map(rr=>({id:uid(),name:rr.name,pipe:A(rr.cwPipe),flowLpm:rr.cwQ?Math.round(rr.cwQ):null,prv:false,
         floorPipes:rr.floors.map((f,i)=>({id:uid(),floorNo:i+1,name:f.name,pipe:A(f.cwPipe),qty:1})),
         zones:rr.zones.map(z=>({name:z.name,pipe:A(z.cwPipe),fvCnt:z.fvCnt||0})),
+        horizLen:(rr.hLen>0?rr.hLen:null),   // 관경 앱 「입상관별 최원 경로 수평길이」 — 같은 값을 두 번 넣지 않게
         reqKPa:rr.reqKPa||100}));
+      if(d.results.floorH>0) S.building.floorHeight=d.results.floorH;
+      if(d.results.mainLen>0) S.pump.mrLen=d.results.mainLen;
       if(d.results.supplyKPa){ S.pump.pressure=+(d.results.supplyKPa/KGF2KPA).toFixed(2); S.pump.pressureSet=true; }
       renderAll();
       alert(`관경 앱 결과 연동 완료 (${d.results.ruleVersion||''}).\n입상관 ${S.groups.length}개, 화장실 ${S.groups.reduce((s,g)=>s+g.zones.length,0)}개 — 관경은 관경 앱 계산값입니다.`);
