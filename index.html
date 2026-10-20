@@ -248,7 +248,7 @@ const S={
   system:'booster',
   material:'sts',
   mr:mrDefaults(),
-  pump:{count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8},
+  pump:{count:2,set:true,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8},
   building:{floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3},
   inlet:inletDefaults(),
   tank:tankDefaults(),
@@ -348,8 +348,8 @@ function calcMR(){
   if(isBst){
     add('LCV 바이패스',P.inletPipe||'50A',+M.lcvBypLen||0,'평상시 닫힘');
     // 흡입·토출 헤더의 분기는 펌프 대수만큼 생긴다. 길이 × 계수로는 모자란다 (2026-08-30 정정)
-    add('펌프 흡입 배관',P.pumpPipe||'65A',(+M.suctionLen||0)*P.count,`${M.suctionLen}m × ${P.count}대 · 티는 헤더 분기 ${P.count}개소`,P.count);
-    add('펌프 토출 배관',P.pumpPipe||'65A',(+M.dischargeLen||0)*P.count,`${M.dischargeLen}m × ${P.count}대 · 티는 헤더 분기 ${P.count}개소`,P.count);
+    add('펌프 흡입 배관',P.pumpPipe||'65A',(+M.suctionLen||0)*pumpSets(),`${M.suctionLen}m × ${pumpSets()}${P.set&&P.count===2?'조 (2대 SET)':'대'} · 티는 헤더 분기 ${pumpSets()}개소`,pumpSets());
+    add('펌프 토출 배관',P.pumpPipe||'65A',(+M.dischargeLen||0)*pumpSets(),`${M.dischargeLen}m × ${pumpSets()}${P.set&&P.count===2?'조 (2대 SET)':'대'} · 티는 헤더 분기 ${pumpSets()}개소`,pumpSets());
     add('토출 헤더·메인(분기까지)',P.mainPipe,+P.mrLen||0);
     add('비상 바이패스(시수직결)',P.inletPipe||'50A',+M.emerBypLen||0,'평상시 닫힘');
   } else {
@@ -362,7 +362,7 @@ function calcMR(){
     add('PRV 세트 배관',pipe,(+M.prvSetLen||0)*n,`${M.prvSetLen}m × ${n}개소`);
   const eK=+M.elbowK||0, tK=+M.teeK||0;
   const items=segs.map(s=>({...s,elbow:Math.ceil(s.len*eK),tee:s.teeFix!=null?s.teeFix:Math.ceil(s.len*tK)}));
-  return {items,reducer:isBst?P.count*2:0,eK,tK,insul:M.insul||'고무발포 25T'};
+  return {items,reducer:isBst?pumpSets()*2:0,eK,tK,insul:M.insul||'고무발포 25T'};
 }
 function pipeSpecLabel(){
   return S.material==='general'?'아연도강관(KS D 3507)':'STS304 (KS D 3576)';
@@ -555,28 +555,28 @@ function calcValves(){
     const pk=(on,pos,name,spec,pipe,qty,note,opt)=>{
       if(on) skip(pos,name,pipe,pkgNote); else add(pos,name,spec,pipe,qty,note,opt);
     };
-    pk(PK.gv,'펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대`,
+    pk(PK.gv,'펌프 흡입측','게이트밸브','게이트밸브',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
       {grade:GRADE.DEF,cond:'펌프 교체·정비'});
-    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,P.count,`×${P.count}대 — 임펠러 보호`,
+    add('펌프 흡입측','Y형 스트레이너','Y형 스트레이너',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} — 임펠러 보호`,
       {grade:GRADE.DEF,dir:'수조 → 펌프'});
-    pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,P.count,`×${P.count}대`,
+    pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
       {grade:GRADE.DEF});
     // 기준: IN-001 1.3.9 a) — 흡입측에 체크밸브를 두지 않는다 (NPSH 여유)
     skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (IN-001 1.3.9 a)');
-    pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,P.count,`×${P.count}대`,
+    pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
       {grade:GRADE.DEF});
-    pk(PK.cv,'펌프 토출측','체크밸브','체크밸브',pumpPipe,P.count,`×${P.count}대 – 게이트밸브 안쪽(펌프측)`,
+    pk(PK.cv,'펌프 토출측','체크밸브','체크밸브',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 게이트밸브 안쪽(펌프측)`,
       {grade:GRADE.DEF,dir:'펌프 → 헤더',cond:'정지 펌프로의 역류·역회전 방지'});
     // 기준: WS-006 — 학회 「건축기계설비 설계기준」 3.3.7 (1) 2)
     //   「펌프 토출측 및 양수관 구간에 설치된 첵밸브 상단」에 부착한다. 목적은 첵밸브의 파손 방지이므로
     //   토출 헤더(첵밸브 하류)가 아니라 첵밸브 상류측(펌프측)이라야 한다. 2026-08-30 위치 정정.
-    add('펌프 토출측','수격방지기','수격방지기',pumpPipe,P.count,`×${P.count}대 – 첵밸브 상류측(펌프측). 첵밸브 파손 방지`);
-    pk(PK.gv,'펌프 토출측','게이트밸브','게이트밸브',pumpPipe,P.count,`×${P.count}대 – 체크밸브 점검용 차단`,
+    add('펌프 토출측','수격방지기','수격방지기',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 첵밸브 상류측(펌프측). 첵밸브 파손 방지`);
+    pk(PK.gv,'펌프 토출측','게이트밸브','게이트밸브',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 체크밸브 점검용 차단`,
       {grade:GRADE.DEF,cond:'개별 펌프의 정비·교체'});
     // 기준: IN-001 1.3.9 — 펌프 토출압과 공통 헤더압을 구분해 확인한다.
     //   기준: IN-001 1.3.4 「압력계를 양쪽에 둔다 — 토출과 흡입의 차가 실양정이다」
-    pk(PK.pg,'펌프 토출측','압력계','압력계(펌프 토출압, 게이지콕 포함)',pumpPipe,P.count,
-      `×${P.count}대 – 흡입압과의 차가 실양정`,{grade:GRADE.DEF});
+    pk(PK.pg,'펌프 토출측','압력계','압력계(펌프 토출압, 게이지콕 포함)',pumpPipe,pumpSets(),
+      `×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 흡입압과의 차가 실양정`,{grade:GRADE.DEF});
     add('토출 헤더','압력계','압력계(공통 헤더압, 게이지콕 포함)',P.mainPipe,1,'계통 송출압 확인',{grade:GRADE.DEF});
     add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정',{grade:GRADE.DEF});
     // 비상 바이패스 — 차단밸브 2개(평상시 닫힘)만. 더블체크밸브는 두지 않는다 (2026-10-19 사용자 결정)
@@ -836,10 +836,11 @@ function renderSettings(){
   if(S.system==='booster'){
     h+=`<div class="form-row">
       <span class="form-label">주펌프 대수</span>
-      <select onchange="setPump('count',+this.value)">
+      <select onchange="setPumpMode(this.value)">
         <option value="1"${P.count===1?' selected':''}>1대 (단독)</option>
-        <option value="2"${P.count===2?' selected':''}>2대 (주+예비)</option>
-        <option value="3"${P.count===3?' selected':''}>3대 (주2+예비1)</option>
+        <option value="2s"${P.count===2&&P.set?' selected':''}>2대 (1대 예비, SET) — 한 스키드, 펌프별 밸브 1조</option>
+        <option value="2"${P.count===2&&!P.set?' selected':''}>2대 (단독) — 따로 설치, 펌프별 밸브 2조</option>
+        <option value="3"${P.count===3?' selected':''}>3대 (단독)</option>
       </select>
     </div>
     <div class="form-row">
@@ -1210,13 +1211,13 @@ function renderSettings(){
     <div class="form-row">
       <span class="form-label">펌프 흡입 배관 — 1대당 (m)</span>
       <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.suctionLen??4}" onchange="setMR('suctionLen',this.value)">
-      <span style="font-size:11px;color:var(--accent)">× ${P.count}대 = ${(((+M.suctionLen)||0)*P.count).toFixed(1)}m 자동</span>
+      <span style="font-size:11px;color:var(--accent)">× ${pumpSets()}${P.set&&P.count===2?'조':'대'} = ${(((+M.suctionLen)||0)*pumpSets()).toFixed(1)}m 자동</span>
       <span style="font-size:11px;color:var(--text2)">흡입 헤더 분기~펌프 노즐까지</span>
     </div>
     <div class="form-row">
       <span class="form-label">펌프 토출 배관 — 1대당 (m)</span>
       <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.dischargeLen??2}" onchange="setMR('dischargeLen',this.value)">
-      <span style="font-size:11px;color:var(--accent)">× ${P.count}대 = ${(((+M.dischargeLen)||0)*P.count).toFixed(1)}m 자동</span>
+      <span style="font-size:11px;color:var(--accent)">× ${pumpSets()}${P.set&&P.count===2?'조':'대'} = ${(((+M.dischargeLen)||0)*pumpSets()).toFixed(1)}m 자동</span>
       <span style="font-size:11px;color:var(--text2)">펌프 노즐~합류점(티)까지만 — 합관 이후는 아래 헤더·메인에서 1회 계산</span>
     </div>
     <div class="form-row">
@@ -1432,8 +1433,8 @@ function renderDiagram(){
   const inletPipe=P.inletPipe||'50A';
   const pumpPipe=P.pumpPipe||'65A';
   const isBst=S.system==='booster';
-  const nPump=P.count;
-  const pumpLabels=nPump===1?['주펌프']:nPump===2?['주펌프','예비펌프']:['주펌프①','주펌프②','예비펌프'];
+  const nPump=pumpSets();
+  const pumpLabels=(P.set&&P.count===2)?['펌프 SET(2대)']:nPump===1?['주펌프']:nPump===2?['주펌프','예비펌프']:['주펌프①','주펌프②','예비펌프'];
 
   const CX=220; // main center x
   const pumpSpacing=nPump===1?0:130;
@@ -1465,7 +1466,7 @@ function renderDiagram(){
   const IN_STEP=40, IN_TOP=INLET_Y+45;
   const inletYs=inletStack.map((k,i)=>IN_TOP+i*IN_STEP);
   const INLET_END=inletYs[inletYs.length-1];
-  const TANK_Y=isBst?INLET_END+185:INLET_END+50; // 고가수조식은 LCV 구간이 없어 압축
+  const TANK_Y=isBst?INLET_END+205:INLET_END+50; // 고가수조식은 LCV 구간이 없어 압축
   const TANK_H=80, TANK_BOT=TANK_Y+TANK_H;
   // 저수조 구획 — 칸마다 인입·유출·드레인이 생기므로 수직 여유를 더 둔다
   const nTank=isBst?tankCompart():1;
@@ -1560,13 +1561,15 @@ function renderDiagram(){
     const dx=CX-tankW/2+i*(tankW/nTank);
     s+=`<line x1="${dx}" y1="${TANK_Y}" x2="${dx}" y2="${TANK_BOT}" stroke="${TH.text2}" stroke-width="1.5" stroke-dasharray="4,3"/>`;
   }
+  if(nTank===1&&isBst) s+=symFJ(CX,TANK_Y-14);   // 수조 접속 플렉시블 (입구)
   if(nTank>1){
     // 인입 분기 헤더 + 칸별 차단밸브
-    const brY=TANK_Y-26;
+    const brY=TANK_Y-46;
     s+=`<line x1="${cellXs[0]}" y1="${brY}" x2="${cellXs[nTank-1]}" y2="${brY}" stroke="${SC.pipe}" stroke-width="2"/>`;
     cellXs.forEach(cx=>{
       s+=svgLine(cx,brY,cx,TANK_Y);
       s+=symShut(cx,brY+13,7);
+      if(isBst) s+=symFJ(cx,brY+34);   // 수조 접속 플렉시블 — 목록 「저수조 입구 플렉시블조인트」
     });
     s+=svgText(cellXs[0]-46,brY-4,'칸별 인입',SC.gv,7,'end');
   }
@@ -1581,7 +1584,8 @@ function renderDiagram(){
       s+=svgLine(cx,TANK_BOT,cx-20,TANK_BOT);
       s+=symDV(cx-20,TANK_BOT+14);
       s+=svgLine(cx,TANK_BOT,cx,jY);
-      s+=symShut(cx,TANK_BOT+26,7,pumpPipe);
+      if(isBst) s+=symFJ(cx,TANK_BOT+12);   // 수조 접속 플렉시블 — 목록 「저수조 출구 플렉시블조인트」
+      s+=symShut(cx,TANK_BOT+34,7,pumpPipe);
     });
     s+=`<line x1="${cellXs[0]}" y1="${jY}" x2="${cellXs[nTank-1]}" y2="${jY}" stroke="${SC.pipe}" stroke-width="2"/>`;
     s+=svgLine(CX,jY,CX,GV2_Y-10);
@@ -1590,6 +1594,7 @@ function renderDiagram(){
     s+=svgLine(CX+40,TANK_BOT,CX+40,TANK_BOT+2);
     s+=symDV(CX+40,TANK_BOT+16);
     s+=svgLine(CX,TANK_BOT,CX,GV2_Y-10);
+    if(isBst) s+=symFJ(CX,TANK_BOT+13);   // 수조 접속 플렉시블 (출구)
   }
   s+=svgText(CX-7,(TANK_BOT+GV2_Y)/2+4,outPipe,TH.text2,8,'end');
   s+=symGV(CX,GV2_Y);
@@ -1770,6 +1775,7 @@ function renderDiagram(){
 function renderLegend(x,y){
   const items=[
     {sym:'gv',lbl:'게이트밸브(GV)'},
+    {sym:'gv',lbl:'버터플라이밸브(BF)'},
     {sym:'bv',lbl:'볼밸브(BV)'},
     {sym:'cv',lbl:'체크밸브(CV)'},
     {sym:'prv',lbl:'감압밸브(PRV)'},
@@ -2289,6 +2295,10 @@ const NUM_RULES={
   pump:{count:[1,3,2],pressure:[0.1,30,7],flow:[1,100000,300],mrLen:[0,300,8]},
   building:{floors:[1,120,5],floorHeight:[2,10,3.5],exConfirmed:[0,20,0],targetPressure:[0.5,10,3],prvPressure:[0.5,10,2.5],tankHeight:[0,30,3]}
 };
+// 펌프별 밸브·배관 조 수 — 「2대 (1대 예비, SET)」 이면 한 스키드라 1조, 그 밖에는 대수만큼 (2026-10-20 사용자 요청)
+function pumpSets(){ const P=S.pump; return (P.set&&P.count===2)?1:P.count; }
+function pumpCountLabel(){ const P=S.pump; return P.count===1?'1대 (단독)':P.count===2?(P.set?'2대 (1대 예비, SET)':'2대 (단독)'):'3대 (단독)'; }
+function setPumpMode(v){ S.pump.count=v==='2s'?2:+v; S.pump.set=(v==='2s'); renderAll(); }
 function setPump(k,v){
   const r=NUM_RULES.pump[k];
   if(r)v=clampNum(v,r[0],r[1],r[2]);
@@ -2362,7 +2372,7 @@ function resetAll(){
   if(!confirm('모든 설정을 초기화하시겠습니까?')) return;
   S.projectName='새 프로젝트'; S.system='booster'; S.material='sts';
   S.mr=mrDefaults();
-  S.pump={count:2,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8};
+  S.pump={count:2,set:true,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8};
   S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3};
   S.inlet=inletDefaults(); S.tank=tankDefaults(); S.pumpPkg=pkgDefaults();
   S.groups=[]; _id=1;
