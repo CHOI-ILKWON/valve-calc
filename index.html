@@ -172,7 +172,7 @@ function inletDefaults(){
     dcv:'auto',           // 'auto' | 'force'(관할 승인조건) | 'off'
     bfFrom:65,            // 버터플라이 시작 관경(A) — 회사 표준, 법정 아님
     pg:true,              // 인입압 압력계 (게이지콕 포함)
-    lcvBypass:true,       // LCV 바이패스 (OPTIONAL, 평상시 닫힘)
+    lcvBypass:true,       // LCV 바이패스 (DEFAULT, 평상시 닫힘) — 사용자 샘플 LCV Unit 포함 (2026-10-22)
     prvBypass:false,      // PRV 바이패스 — 기본 제외 (IN-001 1.3.10.3)
     emerBypass:true       // 비상 바이패스(시수직결)
   };
@@ -506,15 +506,15 @@ function calcValves(){
     if(I.pg)
       add('수도 인입부','압력계','압력계(인입압, 게이지콕 포함)',inletPipe,1,
         '인입압 확인 — 게이지콕(소형 차단밸브) 포함',{grade:GRADE.DEF});
-    // 기준: IN-001 1.3.7 a) — 도면 주기 6 「게이트밸브 이후 플렉시블 조인트」
-    add('수도 인입부','플렉시블조인트','플렉시블조인트(차단밸브 이후)',inletPipe,1,
-      '도면 기준 위치 — 부동침하·진동 변위 흡수. 학회 3.3.6',{grade:GRADE.DEF});
+    // 2026-10-22 사용자 확정(루트 기준 51번) — 인입 주관에는 FJ 를 두지 않는다. 변위 흡수는 저수조 칸별 접속 FJ 가 맡는다.
+    skip('수도 인입부','플렉시블조인트',inletPipe,'사용자 샘플 — 인입 주관 FJ 없음, 저수조 칸별 접속 FJ로 대체');
 
     // ── LCV 세트 — 기준: IN-001 1.3.8 ──
     add('LCV 세트','Y형 스트레이너','Y형 스트레이너(LCV 전단)',inletPipe,1,
       'LCV 파일럿·시트 이물질 보호',{grade:GRADE.DEF,dir:'유입 → LCV'});
-    add('LCV 세트','수격방지기','수격방지기(LCV용)','20A',1,
-      'LCV 급폐 충격 흡수 – 학회 3.3.7 (1) 3). 토출측 1m 이내',{grade:GRADE.DEF});
+    // 2026-10-22 사용자 확정(루트 기준 51번) — 사용자 샘플 「수위조절밸브 Unit」에 LCV용 수격방지기가 없다.
+    //   저수조 내부 볼탭용 수격방지기는 그대로 둔다.
+    skip('LCV 세트','수격방지기','20A','사용자 샘플 — LCV Unit에 수격방지기 없음 (볼탭용은 저수조 내부에 유지)');
     add('LCV 세트','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,
       '저수조 인입 LCV – 수위 차면 자동 차단',{grade:GRADE.DEF});
     add('LCV 세트',SHUT,shutoffSpec(inletPipe,'LCV 전·후 차단'),inletPipe,2,
@@ -525,11 +525,11 @@ function calcValves(){
       {grade:GRADE.DEF,cond:lawRef('inDrain')});
     if(I.lcvBypass){
       add('LCV 바이패스',SHUT,shutoffSpec(inletPipe,'바이패스 전·후'),inletPipe,2,
-        'LCV 정비 중 임시 급수',{grade:GRADE.OPT,state:'NC',
+        'LCV 정비 중 임시 급수',{grade:GRADE.DEF,state:'NC',
         cond:'유지관리 중 급수 지속이 필요함',
         warn:'열어두면 LCV 가 수위를 못 막아 저수조 과수위·월류로 이어진다. 사용 후 반드시 닫을 것'});
       add('LCV 바이패스','글로브밸브','글로브밸브(유량조절)',inletPipe,1,
-        '바이패스 수동 유량 조절',{grade:GRADE.OPT,state:'NC',
+        '바이패스 수동 유량 조절',{grade:GRADE.DEF,state:'NC',
         warn:'평상시 닫힘 상태를 유지한다'});
     } else {
       skip('LCV 바이패스',SHUT,inletPipe,'사용자가 바이패스를 사용하지 않음');
@@ -538,7 +538,7 @@ function calcValves(){
     // 기준: WS-006 Rule 8 — 학회 3.3.6. 「건물의 흔들림, 배관의 진동, 부동침하 등에 의한 변위의
     //   흡수를 위해서는 플렉시블조인트를 설치하거나 스위블이음으로 배관하여야 한다」
     //   건물은 말뚝 위에 얹히고 땅은 가라앉으므로 지중관이 건물로 들어오는 자리가 가장 크게 어긋난다.
-    //   기준 도면의 FJ 위치(차단밸브 이후)와는 목적이 다르므로 선택 항목으로 둔다.
+    //   인입 주관 FJ(차단밸브 이후)는 2026-10-22 제외했다. 이 항목은 목적이 달라 선택 항목으로 그대로 둔다.
     add('건물 인입 경계','플렉시블조인트','플렉시블조인트(건물 인입부)',inletPipe,1,
       '지중관→건물. 부동침하 변위 흡수 – 학회 3.3.6',
       {grade:GRADE.OPT,cond:'지중관이 건물로 들어오는 자리의 부등침하 대비'});
@@ -606,6 +606,9 @@ function calcValves(){
       {grade:GRADE.DEF,dir:'수조 → 펌프'});
     pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
       {grade:GRADE.DEF});
+    // 2026-10-22 사용자 확정(명세 3.6) — 펌프 흡입 측면 압력계. 토출압과의 차가 실양정 (IN-001 1.3.4)
+    pk(PK.pg,'펌프 흡입측','압력계','압력계(펌프 흡입압, 게이지콕 포함)',pumpPipe,pumpSets(),
+      `×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 토출압과의 차가 실양정`,{grade:GRADE.DEF});
     // 기준: IN-001 1.3.9 a) — 흡입측에 체크밸브를 두지 않는다 (NPSH 여유)
     skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (IN-001 1.3.9 a)');
     pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
@@ -700,7 +703,8 @@ function calcValves(){
          warn:'감압밸브는 열린 채로도 고장난다. 그때 하류가 상류압을 그대로 받는다'});
   }
   for(const g of G){
-    add(`${g.name} 분기`,'볼밸브','볼밸브(입상관 차단)',g.pipe,1,'메인 분기');
+    // 2026-10-22 사용자 확정(명세 6장) — 입상관 분기 차단은 볼밸브가 아니라 2.2 규칙(그룹관경 기준 GV/BF)
+    add(`${g.name} 분기`,shutoffType(g.pipe),shutoffSpec(g.pipe,'입상관 차단'),g.pipe,1,'메인 분기');
     if(g.prv) addPrvSet(g.name,g.pipe,1,B.prvPressure,groupMaxPressure(g));
     add(`${g.name} 최상부`,'공기빼기밸브','자동공기빼기밸브','15A',1,'입상관 최상부');
     add(`${g.name} 최하부`,'배수밸브','배수밸브','25A',1,'입상관 최하부');
@@ -962,7 +966,7 @@ function renderSettings(){
     h+=`<div class="section">
       <div class="section-title">인입부 구성 — 기준 도면 반영</div>
       <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
-        FROM CIVIL PIPE → 차단밸브 → 수도계량기 → 스트레이너 → 차단밸브 → 더블체크밸브 → 압력계 → 플렉시블 → LCV 세트 → 저수조
+        FROM CIVIL PIPE → 차단밸브 → 수도계량기 → 스트레이너 → 차단밸브 → 더블체크밸브 → 압력계 → LCV 세트(바이패스 포함) → 저수조
       </div>
       <div class="form-row">
         <span class="form-label">버터플라이 시작 관경</span>
@@ -1546,7 +1550,7 @@ function renderDiagram(){
     inletStack.push('st','shut');
     if(_dcv.on) inletStack.push('dcv');
     if(_I.pg) inletStack.push('pg');
-    inletStack.push('fj');
+    // 인입 주관 FJ 는 그리지 않는다 (2026-10-22 사용자 샘플 기준)
   } else { inletStack.push('shut','cv'); }
   const IN_STEP=40, IN_TOP=INLET_Y+45;
   const inletYs=inletStack.map((k,i)=>IN_TOP+i*IN_STEP);
@@ -1593,7 +1597,8 @@ function renderDiagram(){
     else if(kind==='dcv') s+=symDCV(CX,y);
     else if(kind==='cv')  s+=symCV(CX,y);
     else if(kind==='fj')  s+=symFJ(CX,y);
-    else if(kind==='pg'){ // 압력계는 측면 분기
+    else if(kind==='pg'){ // 압력계는 측면 분기 — 주관은 끊지 않고 지나간다
+      s+=svgLine(CX,y-11,CX,y+11);
       s+=svgLine(CX,y,CX+26,y);
       s+=symPG(CX+38,y);
       s+=svgText(CX+52,y+4,'(게이지콕 포함)',TH.text2,7,'start');
@@ -1706,6 +1711,13 @@ function renderDiagram(){
       s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv1,8,'GV');
       s+=symST(px,PUMP_SUCK_Y+COMP_OFFSETS.st);
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj1);
+      // 흡입 압력계 — 펌프 흡입 측면 (명세 3.6, 2026-10-22). 패키지 포함이면 그리지 않는다
+      if(!PKG().pg){
+        const pgY=PUMP_SUCK_Y+(COMP_OFFSETS.fj1+COMP_OFFSETS.pump)/2-6;
+        s+=svgLine(px,pgY,px-20,pgY);
+        s+=symPG(px-30,pgY,'');
+        s+=svgText(px-44,pgY+4,'PG',SC.pg,8,'end');
+      }
       s+=symPump(px,PUMP_SUCK_Y+COMP_OFFSETS.pump,18,pumpLabels[i]);
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj2);
       s+=svgText(px-7,PUMP_SUCK_Y+COMP_OFFSETS.fj2+18,pumpPipe,TH.text2,8,'end');
@@ -1792,11 +1804,11 @@ function renderDiagram(){
     const g=G[i], gx=groupXs[i];
     let gy=GROUP_HDR_Y;
 
-    // Drop from distribution header → BV (입상관 초입)
+    // Drop from distribution header → 입상관 차단 GV/BF (2.2 규칙, 그룹관경 기준)
     s+=svgLine(gx,gy,gx,gy+15);
     s+=svgText(gx-7,gy+8,g.pipe,TH.text2,8,'end');
     gy+=15;
-    s+=symBV(gx,gy+10,9,'BV');
+    s+=symShut(gx,gy+10,9,g.pipe);
     gy+=25;
     s+=svgLine(gx,gy,gx,gy+10);
     gy+=10;
