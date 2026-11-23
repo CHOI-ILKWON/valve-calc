@@ -169,7 +169,8 @@ function inletDefaults(){
   return {
     meter:true,           // 수도계량기 — 별도 계측 필요 시 (IN-001 1.3.7 b), CONDITIONAL)
     tankInlet:'airgap',   // 'airgap' 자유낙수 | 'submerged' 수몰 유입
-    dcv:'auto',           // 'auto' | 'force'(관할 승인조건) | 'off'
+    dcv:'auto',           // (CH-20261123-03 이후 사용 안 함 — 계량기 후단 DCV 는 항상 필수. 옛 저장값 호환용)
+    lcvType:'balltap',    // 'balltap' 정수위 볼탭식(파일럿·완폐) | 'electric' 전동·전자식(급폐쇄) — U4
     bfFrom:65,            // 버터플라이 시작 관경(A) — 회사 표준, 법정 아님
     pg:true,              // 인입압 압력계 (게이지콕 포함)
     lcvBypass:true,       // LCV 바이패스 (DEFAULT, 평상시 닫힘) — 사용자 샘플 LCV Unit 포함 (2026-10-22)
@@ -204,12 +205,26 @@ const lawRef=k=>`${LAW} 제${TANK_LAW[k].no}호 — ${TANK_LAW[k].txt}`;
 // 구획하면 LCV 세트 이후 인입관이 칸 수만큼 갈라지고, 유출·드레인·오버플로도 칸마다 생긴다.
 const TANK_SPLIT_TON=5; // 초과 기준
 // volume 총용량(법 판정 기준) / effective 유효용량(설비 계산용, 참고 표시)
-function tankDefaults(){ return {volume:20, effective:0, compart:'auto', fireCombined:false}; }
+function tankDefaults(){ return {volume:20, effective:0, compart:'auto', fireCombined:false, inflowLps:0}; }
 function TK(){ return S.tank||(S.tank=tankDefaults()); }
 function tankCompart(){
   const t=TK();
   if(t.compart!=='auto') return Math.max(1,Math.min(4,+t.compart||1));
   return (+t.volume||0)>TANK_SPLIT_TON?2:1;
+}
+// ── 오버플로 관경 — KDS 31 30 15:2026 4.12(2) 표 4.12-1 (CH-20261123-03) ─────────
+//   급수조 최대 급수량(L/s) 구간의 관경 이상, 그리고 인입 급수관보다 1단계 이상 큰 관경 — 둘 중 큰 값.
+//   표 구간 경계(3·9·12·25·41·63 L/s)는 위 구간(큰 관경)으로 본다(안전측).
+//   바닥 위 150 mm 이상에서 배출, 출구는 내식성 방충망 또는 수평 앵글시트 체크밸브.
+const OF_TABLE=[[3,50],[9,65],[12,80],[25,100],[41,125],[63,150],[Infinity,200]];
+const OF_DN=[50,65,80,100,125,150,200,250];
+function overflowSize(){
+  const inDN=pipeMM(S.pump.inletPipe||'50A'), q=+TK().inflowLps||0;
+  const byInlet=OF_DN.find(d=>d>inDN)||250;
+  const byTable=q>0?OF_TABLE.find(([lim])=>q<lim)[1]:null;
+  const dn=Math.max(byInlet,byTable||0);
+  return {dn,byInlet,byTable,q,inDN,
+    txt:`O.F ${dn}A — ${byTable?`표 4.12-1(최대 급수량 ${q} L/s) ${byTable}A`:'표 4.12-1 판정 보류(최대 급수량 미입력)'} · 인입 ${inDN}A +1단계 ${byInlet}A 중 큰 값. 바닥 위 150 mm 이상 배출, 출구 방충망(또는 수평 앵글시트 체크밸브) — KDS 31 30 15 4.12(2)`};
 }
 // 펌프 패키지(스키드) 포함 품목 — 켜면 외부 수량에서 빼 중복 산출을 막는다 (IN-001 1.3.9 b)
 function pkgDefaults(){ return {fj:false,cv:false,gv:false,pg:false}; }
@@ -231,15 +246,13 @@ function shutoffSpec(pipe,use){
   return t==='버터플라이밸브'?`버터플라이밸브(${bfOperator(pipe)}, ${use})`:`게이트밸브(${use})`;
 }
 
-// 더블체크밸브 적용 판정 — 기준: IN-001 1.3.7 c)
-// 자유낙수(air gap)로만 유입되고 가압계통과 분리되면 역사이펀 경로가 없어 적용하지 않는다.
+// 더블체크밸브(역류방지밸브) — 계량기 후단 필수 (CH-20261123-03)
+//   기계설비 기술기준 [별표 5] 3.1(5) 「수돗물의 오염을 방지하기 위한 계량기 후단의 역류방지밸브를 설치해야 한다」
+//   (매뉴얼 2022 확인). 자유낙수(토수구 공간)여도 빼지 않는다. 종전 자동 판정(IN-001 1.3.7 c)·제외 선택은 폐지.
 function dcvDecision(){
   const I=IN();
-  if(I.dcv==='force') return {on:true, why:'관할 수도사업자 승인조건 — 사용자 지정'};
-  if(I.dcv==='off')   return {on:false,why:'사용자가 제외함 (승인조건 확인 필요)'};
-  if(I.tankInlet==='submerged')
-    return {on:true, why:'저수조 수몰 유입 — 역사이펀 경로가 있다'};
-  return {on:false,why:'자유낙수 유입이고 가압급수계통과 분리됨 — 토수구 공간이 역류를 물리적으로 차단'};
+  return {on:true, why:'계량기 후단 역류방지밸브 필수 — 기계설비 기술기준 [별표 5] 3.1(5)'
+    +(I.tankInlet==='submerged'?' · 수몰 유입(역사이펀 경로)':'')};
 }
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -262,13 +275,19 @@ const MIN_PRESSURE=0.7; // (구) 공통 판정값 — 2026-10-16 폐지, 참고�
 // 기준: 통합기준 U11 (토론 D07·D14·D15) — 판정은 kPa, 기구별 최저 필요압(세정밸브 100 · 샤워 70 · 그 외 55).
 //   입상관마다 말단 기구의 필요압(reqKPa)을 쓰고, 모르면 세정밸브 기준 100 kPa 로 본다(안전측).
 const KGF2KPA=98.0665;
-const REQ_OPTS=[[100,'세정밸브 100 kPa'],[70,'샤워 70 kPa'],[55,'일반 55 kPa']];
+// KDS 31 30 15:2026 표 4.3-1 — 샤워기(압력식·온도감지 혹은 혼합밸브) 130 kPa 추가 (CH-20261123-03)
+const REQ_OPTS=[[130,'샤워(압력식·온도감지 혼합밸브) 130 kPa'],[100,'세정밸브 100 kPa'],[70,'샤워 70 kPa'],[55,'일반 55 kPa']];
 function groupReqKPa(g){ return +g.reqKPa||100; }
 function floorReqKPa(f){
   let r=0;
   for(const g of S.groups){ const a=+g.fromFloor||1, b=+g.toFloor||S.building.floors; if(f>=Math.min(a,b)&&f<=Math.max(a,b)) r=Math.max(r,groupReqKPa(g)); }
   return r||55;
 }
+// ── 앱 간 값 옮기기 표기 (CH-20261123-06, 00_현행기준/앱간_값옮기기_표기기준.md 2.2·2.3) ──
+//   받는 칸 옆에 작은 회색 글씨로 출처. 자동으로 채우지 않는다. 압력 kgf/cm² 칸에는 kPa 환산을 함께 보인다.
+const SRC_STYLE='font-size:11px;color:var(--text2);white-space:nowrap';
+function srcTag(t){ return `<span class="src-tag" style="${SRC_STYLE}">← ${t}</span>`; }
+function kpaTag(v){ const n=+v; return `<span class="kpa-tag" style="${SRC_STYLE}">= ${isFinite(n)&&n>0?Math.round(n*KGF2KPA):'—'} kPa</span>`; }
 function supplySet(){ return !!S.pump.pressureSet||S.system==='gravity'; }   // D15 — 공급압이 프로젝트 값으로 입력됐는지
 function floorPressure(floor){
   const B=S.building;
@@ -280,9 +299,6 @@ function floorPressure(floor){
   // 부스터식: 펌프(1층 바닥 기준) 토출압 − 해당 층까지 정수두
   return S.pump.pressure-(floor-1)*B.floorHeight*0.1;
 }
-function needsPRV(floor){
-  return floorPressure(floor) > S.building.targetPressure;
-}
 function groupMaxPressure(g){
   // 담당 층범위가 지정된 입상관의 최대 압력(범위 내 최저층 기준)
   if(!g.fromFloor&&!g.toFloor) return null;
@@ -292,11 +308,14 @@ function groupMaxPressure(g){
 }
 
 // ── PRV 존 구성 — 명세 7.5 (2026-10-20 사용자 확정 공통규칙) ─────────────────
-//   감압 판정: 그룹 담당 최저층 최대압(정지양정·유량 0, 마찰 빼지 않음) > 550 kPa (KDS 31 30 15 4.7, AC-031·033).
+//   감압 판정: 그룹 담당 최저층 최대압(정지양정·유량 0, 마찰 빼지 않음) ≥ 550 kPa (KDS 31 30 15:2026 4.7 「550 kPa 이상」, CH-20261123-03).
+//   targetPressure 는 「설계 목표압력(참고)」 — 어떤 판정에도 쓰지 않는다 (2026-10-28 사용자 확정).
 //   한 입상관에 저층·고층이 함께 붙고 저층이 과압이면 입상관 시작점 PRV 1개로는 해결되지 않는다 →
 //   A안(기계실 분배헤더에서 저층 존 분리 + PRV 세트 1개, 기본) 또는 B안(층 분기 PRV 세트, 점검구 필수).
 //   ⚠ 2차 설정압 기본값(적정압 targetPressure 3.0 vs 7.5-7 존 필요압+마찰)은 사용자 결정 대기 — 두 값을 함께 보인다.
 const MAX_FIXTURE_KPA=550;
+// 감압 대상 = 550 kPa 이상(≥). 정확히 550 도 감압한다 (KDS 4.7, 고시 별표5 2.1.7)
+const overMax=kPa=>kPa>=MAX_FIXTURE_KPA;
 // 유량 0 최대압(kgf/cm²). 부스터식은 정지양정 pressureMax, 미입력이면 토출압으로 「예비」.
 function floorPmax(floor){
   const B=S.building;
@@ -320,19 +339,19 @@ function zeroFlowKPa(g,f){
 function groupZoneCheck(g){
   const r=groupRange(g); if(!r) return null;
   const {lo,hi}=r, pm=floorPmax(lo), loKPa=pm.p*KGF2KPA;
-  const over=[]; for(let f=lo;f<=hi;f++) if(floorPmax(f).p*KGF2KPA>MAX_FIXTURE_KPA) over.push(f);
+  const over=[]; for(let f=lo;f<=hi;f++) if(overMax(floorPmax(f).p*KGF2KPA)) over.push(f);
   const floorPrv=(g.floorPipes||[]).filter(fp=>fp.prv).map(fp=>+fp.floorNo);
-  const uncovered=[]; for(let f=lo;f<=hi;f++) if(zeroFlowKPa(g,f).kPa>MAX_FIXTURE_KPA) uncovered.push(f);
-  const need=loKPa>MAX_FIXTURE_KPA, mixed=hi>lo;
+  const uncovered=[]; for(let f=lo;f<=hi;f++) if(overMax(zeroFlowKPa(g,f).kPa)) uncovered.push(f);
+  const need=overMax(loKPa), mixed=hi>lo;
   let state='ok', msg='';
   // 시작점 PRV 1개 + 저층·고층 혼재: 저층이 여전히 550 초과이거나, 2차압을 낮춰 최상층 말단이 부족하면 해결 불가
   const fr=g.prv?groupFriction(g):null, topShort=!!(fr&&fr.ok===false);
   if(need&&mixed&&g.prv&&(uncovered.length||topShort)) state='riserMixed';
   else if(need&&uncovered.length) state=mixed?'mixed':'single';
   else if(need) state='solved';
-  if(state==='riserMixed') msg=`${uncovered.length?`${uncovered.join('·')}층 유량 0 압력 > ${MAX_FIXTURE_KPA} kPa (시작점 PRV 2차 ${S.building.prvPressure} kgf/cm² 기준)`:''}${uncovered.length&&topShort?', ':''}${topShort?`최상층 말단 ${fr.endKPa.toFixed(0)} kPa < 필요 ${fr.req} kPa`:''}. 입상관 시작점 PRV 1개로는 저층·고층을 함께 해결할 수 없습니다 — 최상층 필요압을 맞추는 2차압이 유량 0 에서 저층에 그대로 걸립니다. A안(기계실 분배헤더에서 저층 존 분리 + PRV 세트 1개) 또는 B안(층 분기 PRV, 시작점 PRV 없음)으로 존을 나누세요.`;
-  else if(state==='mixed') msg=`${uncovered.join('·')}층 유량 0 압력 > ${MAX_FIXTURE_KPA} kPa — 입상관 시작점 PRV 1개로는 저층·고층을 함께 해결할 수 없습니다. A안(기본): 저층 기구군을 기계실 분배헤더에서 별도 분기 + PRV 세트 1개. B안: 루트상 이 입상관(P/S)에 붙을 수밖에 없는 저층 기구군은 층 분기 PRV 세트(점검구 필수).`;
-  else if(state==='single') msg=`담당층 유량 0 압력 > ${MAX_FIXTURE_KPA} kPa — 감압 필요(존별 PRV 세트 1개).`;
+  if(state==='riserMixed') msg=`${uncovered.length?`${uncovered.join('·')}층 유량 0 압력 ≥ ${MAX_FIXTURE_KPA} kPa (시작점 PRV 2차 ${S.building.prvPressure} kgf/cm² 기준)`:''}${uncovered.length&&topShort?', ':''}${topShort?`최상층 말단 ${fr.endKPa.toFixed(0)} kPa < 필요 ${fr.req} kPa`:''}. 입상관 시작점 PRV 1개로는 저층·고층을 함께 해결할 수 없습니다 — 최상층 필요압을 맞추는 2차압이 유량 0 에서 저층에 그대로 걸립니다. A안(기계실 분배헤더에서 저층 존 분리 + PRV 세트 1개) 또는 B안(층 분기 PRV, 시작점 PRV 없음)으로 존을 나누세요.`;
+  else if(state==='mixed') msg=`${uncovered.join('·')}층 유량 0 압력 ≥ ${MAX_FIXTURE_KPA} kPa — 입상관 시작점 PRV 1개로는 저층·고층을 함께 해결할 수 없습니다. A안(기본): 저층 기구군을 기계실 분배헤더에서 별도 분기 + PRV 세트 1개. B안: 루트상 이 입상관(P/S)에 붙을 수밖에 없는 저층 기구군은 층 분기 PRV 세트(점검구 필수).`;
+  else if(state==='single') msg=`담당층 유량 0 압력 ≥ ${MAX_FIXTURE_KPA} kPa — 감압 필요(존별 PRV 세트 1개).`;
   return {lo,hi,loKPa,prelim:pm.prelim,over,uncovered,floorPrv,need,mixed,state,msg};
 }
 
@@ -500,7 +519,7 @@ function calcValves(){
     if(dcv.on)
       add('수도 인입부','더블체크밸브','더블체크밸브 어셈블리(역류방지)',inletPipe,1,
         '단순 체크밸브 1개와 구분 — 중간실 배출형',
-        {grade:GRADE.CON,cond:dcv.why,dir:'시수 → 저수조',warn:'관할 수도사업자 승인조건을 우선한다'});
+        {grade:GRADE.DEF,cond:dcv.why,dir:'시수 → 저수조',warn:'관할 수도사업자가 형식(DCVA·RPZ)을 따로 정하면 그 조건을 따른다'});
     else
       skip('수도 인입부','더블체크밸브',inletPipe,dcv.why);
     if(I.pg)
@@ -512,11 +531,17 @@ function calcValves(){
     // ── LCV 세트 — 기준: IN-001 1.3.8 ──
     add('LCV 세트','Y형 스트레이너','Y형 스트레이너(LCV 전단)',inletPipe,1,
       'LCV 파일럿·시트 이물질 보호',{grade:GRADE.DEF,dir:'유입 → LCV'});
-    // 2026-10-22 사용자 확정(루트 기준 51번) — 사용자 샘플 「수위조절밸브 Unit」에 LCV용 수격방지기가 없다.
-    //   저수조 내부 볼탭용 수격방지기는 그대로 둔다.
-    skip('LCV 세트','수격방지기','20A','사용자 샘플 — LCV Unit에 수격방지기 없음 (볼탭용은 저수조 내부에 유지)');
-    add('LCV 세트','수위조절밸브(LCV)','수위조절밸브(전동식)',inletPipe,1,
+    // U4 (CH-20261123-03) — LCV 형식에 따라 수격방지기.
+    //   전동·전자식 = 급폐쇄 → KDS 31 30 15 4.8 · 고시 [별표 5] 3.2.4(2) · 학회 3.3.7(1)3) 에 따라 LCV 토출측 1 m 이내에 설치.
+    //   정수위 볼탭식(파일럿·완폐) = 2026-10-22 사용자 샘플 「수위조절밸브 Unit」대로 제외. 저수조 내부 볼탭용은 그대로.
+    const lcvElec=I.lcvType==='electric';
+    add('LCV 세트','수위조절밸브(LCV)',lcvElec?'수위조절밸브(전동·전자식)':'수위조절밸브(정수위 볼탭식)',inletPipe,1,
       '저수조 인입 LCV – 수위 차면 자동 차단',{grade:GRADE.DEF});
+    if(lcvElec)
+      add('LCV 세트','수격방지기','수격방지기(LCV 급폐쇄)','20A',1,
+        'LCV 토출측 1 m 이내 – 급폐쇄 충격 흡수 · 20A(종전 명세 3.2 값, 용량은 제품 선정표로 확인)',{grade:GRADE.DEF,cond:'전동·전자식 LCV(급폐쇄) — KDS 31 30 15 4.8, 고시 [별표 5] 3.2.4(2)'});
+    else
+      skip('LCV 세트','수격방지기','20A','정수위 볼탭식(완폐) — 급폐쇄 밸브 아님, 사용자 샘플 LCV Unit에 수격방지기 없음 (볼탭용은 저수조 내부에 유지)');
     add('LCV 세트',SHUT,shutoffSpec(inletPipe,'LCV 전·후 차단'),inletPipe,2,
       'LCV 교체·점검 시 격리용',{grade:GRADE.DEF,cond:'밸브 정비·교체'});
     // 기준: IN-002 4.3 — 저수조 하부 침전찌꺼기 배출구(제4호)와 목적·위치가 다른 별개 항목
@@ -585,8 +610,8 @@ function calcValves(){
       skip('소화용수 연결부','역류방지장치',pumpPipe,
         '생활용수조와 소화수조가 분리되어 연결이 없음 — 겸용 저수조면 '+LAW+' 제15호로 필수');
     // 기준: IN-002 6 Rule 6 — 오버플로관에는 차단밸브를 두지 않는다
-    skip('저수조 오버플로','차단밸브','—',
-      `오버플로관에는 차단밸브를 두지 않는다 — 잠기면 월류 경로가 막힌다 (${nT>1?`칸마다 O.F ${nT}개소`:'O.F 1개소'}). 스크린은 ${LAW} 제${TANK_LAW.screen.no}호`);
+    skip('저수조 오버플로','차단밸브',overflowSize().dn+'A',
+      `오버플로관에는 차단밸브를 두지 않는다 — 잠기면 월류 경로가 막힌다 (${nT>1?`칸마다 O.F ${nT}개소`:'O.F 1개소'}). 스크린은 ${LAW} 제${TANK_LAW.screen.no}호. ${overflowSize().txt}`);
     // 기준: WS-006 Rule 8 — 저수조는 만수 시 무게로 가라앉고 배관은 안 가라앉는다
     add('저수조 입구','플렉시블조인트','플렉시블조인트(수조 접속)',inletPipe,nT,
       '수조 침하 변위 흡수 – 학회 3.3.6',{grade:GRADE.DEF});
@@ -606,9 +631,9 @@ function calcValves(){
       {grade:GRADE.DEF,dir:'수조 → 펌프'});
     pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
       {grade:GRADE.DEF});
-    // 2026-10-22 사용자 확정(명세 3.6) — 펌프 흡입 측면 압력계. 토출압과의 차가 실양정 (IN-001 1.3.4)
-    pk(PK.pg,'펌프 흡입측','압력계','압력계(펌프 흡입압, 게이지콕 포함)',pumpPipe,pumpSets(),
-      `×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 토출압과의 차가 실양정`,{grade:GRADE.DEF});
+    // 2026-10-28 사용자 정정(명세 3.6, 루트 기준서 51.6) — 흡입측 압력계는 두지 않는다.
+    //   압력계는 저수조 인입부와 펌프 토출 측면에만. 흡입압은 저수조 수위로 본다. (CH-20261123-03)
+    skip('펌프 흡입측','압력계',pumpPipe,'흡입측 압력계 없음 — 압력계는 저수조 인입부·펌프 토출측 (2026-10-28 사용자 정정)');
     // 기준: IN-001 1.3.9 a) — 흡입측에 체크밸브를 두지 않는다 (NPSH 여유)
     skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (IN-001 1.3.9 a)');
     pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
@@ -622,9 +647,8 @@ function calcValves(){
     pk(PK.gv,'펌프 토출측','게이트밸브','게이트밸브',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 체크밸브 점검용 차단`,
       {grade:GRADE.DEF,cond:'개별 펌프의 정비·교체'});
     // 기준: IN-001 1.3.9 — 펌프 토출압과 공통 헤더압을 구분해 확인한다.
-    //   기준: IN-001 1.3.4 「압력계를 양쪽에 둔다 — 토출과 흡입의 차가 실양정이다」
     pk(PK.pg,'펌프 토출측','압력계','압력계(펌프 토출압, 게이지콕 포함)',pumpPipe,pumpSets(),
-      `×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 흡입압과의 차가 실양정`,{grade:GRADE.DEF});
+      `×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 펌프 토출 측면, 운전점 확인`,{grade:GRADE.DEF});
     add('토출 헤더','압력계','압력계(공통 헤더압, 게이지콕 포함)',P.mainPipe,1,'계통 송출압 확인',{grade:GRADE.DEF});
     add('토출 헤더','압력탱크','압력탱크(다이어프램)',P.mainPipe,1,'펌프 빈번 기동 방지·압력 안정',{grade:GRADE.DEF});
     // 비상 바이패스 — 차단밸브 2개(평상시 닫힘)만. 더블체크밸브는 두지 않는다 (2026-10-19 사용자 결정)
@@ -671,7 +695,7 @@ function calcValves(){
 
   // PRV 세트 — 그룹(입상관 시작점) PRV 와 B안 층 분기 PRV 가 같은 구성을 쓴다 (명세 6장·7.5-5)
   //   GV(입구) → Y형 스트레이너 → PG 1차(게이지콕) → PRV → PG 2차(게이지콕) → GV(출구), 관경 = 그 위치 관경.
-  //   바이패스 기본 제외, 릴리프 = 상류 최대압 > 적정압(targetPressure) 일 때 조건부.
+  //   바이패스 기본 제외, 릴리프 = 상류 유량 0 최대압 ≥ 550 kPa 일 때 조건부 (명세 5장, CH-20261123-03).
   function addPrvSet(base,pipe,n,setP,up,opt={}){
     const q=n>1?` ×${n}개소`:'', ex=opt.note?` · ${opt.note}`:'';
     add(`${base} PRV 입구`,'게이트밸브','게이트밸브(입구차단)',pipe,n,'PRV 입구'+q+ex,opt.o);
@@ -696,16 +720,16 @@ function calcValves(){
         '감압밸브 우회 바이패스는 기본 구성에서 제외 (IN-001 1.3.10.3). 정비 중 급수가 필요하면 병렬 2열 PRV 로 한다');
     }
     // 기준: IN-001 1.3.10.2 a) — 하류 허용압이 상류 최대압보다 낮으면 릴리프밸브를 둔다
-    if(up!=null&&up>B.targetPressure)
+    if(up!=null&&overMax(up*KGF2KPA))
       add(`${base} PRV 하류`,'릴리프밸브','릴리프밸브(하류 과압 방출)',pipe,n,
-        `PRV 고장 시 하류 보호 — 상류 ${up.toFixed(1)} > 적정압 ${B.targetPressure} kgf/cm²`+q,
+        `PRV 고장 시 하류 보호 — 상류 유량 0 최대압 ${(up*KGF2KPA).toFixed(0)} kPa ≥ ${MAX_FIXTURE_KPA} kPa`+q,
         {grade:GRADE.CON,cond:'하류 기구의 허용압력이 상류 최대압력보다 낮음',
          warn:'감압밸브는 열린 채로도 고장난다. 그때 하류가 상류압을 그대로 받는다'});
   }
   for(const g of G){
     // 2026-10-22 사용자 확정(명세 6장) — 입상관 분기 차단은 볼밸브가 아니라 2.2 규칙(그룹관경 기준 GV/BF)
     add(`${g.name} 분기`,shutoffType(g.pipe),shutoffSpec(g.pipe,'입상관 차단'),g.pipe,1,'메인 분기');
-    if(g.prv) addPrvSet(g.name,g.pipe,1,B.prvPressure,groupMaxPressure(g));
+    if(g.prv){ const r=groupRange(g); addPrvSet(g.name,g.pipe,1,B.prvPressure,r?floorPmax(r.lo).p:null); }
     add(`${g.name} 최상부`,'공기빼기밸브','자동공기빼기밸브','15A',1,'입상관 최상부');
     add(`${g.name} 최하부`,'배수밸브','배수밸브','25A',1,'입상관 최하부');
     // 기준: WS-006 — 학회 3.3.7 · 3.3.3 (1)
@@ -730,7 +754,7 @@ function calcValves(){
         const up=g.prv?B.prvPressure-(f-1)*B.floorHeight*0.1:floorPmax(f).p;
         addPrvSet(`${g.name} ${fp.floorNo}층 분기`,fp.pipe||g.pipe,+fp.qty||1,setP,up,
           {note:'B안 층 분기 PRV — 층 분기 직후(P/S·천장 내부), 점검구 필수',
-           setNote:` (⚠ 2차압 기준 미결정 — 적정압 ${B.targetPressure} / 존 필요압+마찰, 유량 0 ≤ ${MAX_FIXTURE_KPA} kPa)`});
+           setNote:` (⚠ 2차압 기준 미결정 — 설계 목표압력 ${B.targetPressure}(참고) / 존 필요압+마찰, 유량 0 < ${MAX_FIXTURE_KPA} kPa)`});
       }
     }
     for(const z of g.zones){
@@ -765,12 +789,13 @@ function validateValves(list){
     if(!on('수위조절밸브(LCV)')) W.push('저수조 인입 LCV 가 없습니다.');
     else if(list.filter(i=>i.grade!==GRADE.EXC&&i.pos==='LCV 세트'&&/게이트|버터플라이/.test(i.name))
       .reduce((s,i)=>s+i.qty,0)<2) W.push('LCV 전·후 차단밸브가 2개 미만입니다 — 정비 시 격리가 안 됩니다.');
+    // U2 (CH-20261123-03) — 1대 선택은 허용하되 KDS 경고
+    if(P.count===1) W.push('펌프 1대(단독) — KDS 31 30 15:2026 4.6.2(2) 「펌프는 2 대 이상으로 하여야 한다」. 예비 없이 설계하는 근거를 기록하세요.');
     if(!on('체크밸브','펌프 토출측')&&!PK.cv) W.push('펌프 토출 체크밸브가 없습니다 — 정지 펌프로 역류합니다.');
     if(!on('게이트밸브','펌프 토출측')&&!on('버터플라이밸브','펌프 토출측')&&!PK.gv)
       W.push('펌프 토출 차단밸브가 없습니다 — 펌프 1대 정비에 전 계통을 세우게 됩니다.');
-    if(I.dcv==='off') W.push('더블체크밸브를 사용자가 제외했습니다 — 관할 수도사업자 승인조건을 확인하세요.');
-    if(I.tankInlet==='submerged'&&I.dcv==='auto'&&!on('더블체크밸브','수도 인입부'))
-      W.push('수몰 유입인데 인입부 더블체크밸브가 적용되지 않았습니다.');
+    if(!on('더블체크밸브','수도 인입부'))
+      W.push('계량기 후단 역류방지밸브(더블체크밸브)가 없습니다 — 기계설비 기술기준 [별표 5] 3.1(5) 필수.');
     if(I.lcvBypass) W.push('LCV 바이패스는 평상시 닫힘(NC)입니다 — 열어두면 저수조 과수위·월류로 이어집니다.');
     if(!on('수위 경보장치')) W.push(`수위 경보장치가 없습니다 — ${LAW} 제${TANK_LAW.alarm.no}호 법정사항입니다.`);
     if(!on('경보 수신반')) W.push('수위 경보 수신반(관리실)이 없습니다.');
@@ -795,6 +820,17 @@ function validateValves(list){
         .reduce((s,i)=>s+i.qty,0);
       if(outQ<nT) W.push(`저수조 ${nT}칸인데 유출 차단밸브가 ${outQ}개입니다 — 칸별 독립 차단이 안 됩니다.`);
     }
+  }
+  // 2-14 후속 (CH-20261123-03) — 고가수조식은 인입부(계량기·DCV) 구성이 화면에 없다.
+  //   시수 직결로 계량기를 거쳐 들어오면 방식과 관계없이 계량기 후단 DCV 필수 → 별도 확인 경고
+  if(S.system==='gravity')
+    W.push('계량기 후단 역류방지밸브(더블체크밸브) 필요 — 인입부 별도 확인. 고가수조 인입이 시수 직결(계량기 경유)이면 기계설비 기술기준 [별표 5] 3.1(5)에 따라 DCV 를 넣으세요 (이 화면의 체크밸브와 별개).');
+  // 2-8 오버플로 관경 (급수조 공통 — 저수조·고가수조)
+  { const of=overflowSize(); W.push(`오버플로관: ${of.txt}${of.byTable?'':' — 최대 급수량(L/s)을 입력하세요'}.`); }
+  // 2-7 KDS 31 30 15 4.11(3) — 수직관에 연결된 각 층 급수관에는 차단밸브
+  for(const g of S.groups){
+    const nFloorBV=(g.floorPipes||[]).reduce((s,fp)=>s+(+fp.qty||0),0);
+    if(nFloorBV===0) W.push(`${g.name}: 층 차단밸브 0개 — KDS 31 30 15:2026 4.11(3) 「수직관에 연결된 각 층 급수관」에는 차단밸브를 설치해야 합니다. 층 주관(층별 볼밸브)을 입력하세요.`);
   }
   // PRV 존 구성 — 명세 7.5. 담당층 미지정 그룹은 판정하지 않는다
   for(const g of S.groups){
@@ -851,9 +887,23 @@ function renderHelp(){
       발주처 협의 자료, 견적 요청, 신입 교육 자료로 그대로 쓸 수 있습니다.
     </div>
   </div>`;
+  // CH-20261123-06 — 앱간_값옮기기_표기기준.md 1.1 순서표를 같은 문구로 싣는다. 이 앱 단계(④)는 굵게
+  const FLOW=[
+    ['①','위생배관','기구를 입력해 순간최대유량과 필요 양정을 계산한다','Q 순간최대유량, H 필요 양정'],
+    ['②','용량부하 — 부스터펌프 탭','Q·H를 받아 펌프 대수·동력을 정한다','펌프 구성, Q, H'],
+    ['②','용량부하 — 물탱크 탭','수조 용량을 계산한다(AC-032)','수조 유효용량, 칸 수'],
+    ['③','제조사 카탈로그 (사용자)','선정한 펌프 곡선에서 두 값을 읽는다: 설계 유량 운전점의 토출압 P_op, 유량 0 정지양정(최대압) P_max','P_op, P_max'],
+    ['④','밸브','수조·펌프·압력을 넣고 밸브 세트, PRV 존, 계통도를 만든다','—'],
+    ['⑤','위생배관 — 압력검토','공급압 = P_op, 최대압 = P_max를 넣어 말단 잔압과 550 kPa 판정을 확인한다','(부족하면 ①로 돌아가 경로·조닝을 고친다)']];
+  h+=`<div class="section" id="flowOrder"><div class="section-title">앱 간 값 옮기기 순서 — 저수조·급수펌프 (급수 계통)</div>
+    <table class="floor-table"><thead><tr><th>단계</th><th>하는 곳</th><th>하는 일</th><th>다음 단계로 옮길 값</th></tr></thead><tbody>
+    ${FLOW.map(r=>{const me=r[0]==='④';return `<tr${me?' style="font-weight:700"':''}>${r.map(c=>`<td>${me?`<strong>${esc(c)}</strong>`:esc(c)}</td>`).join('')}</tr>`;}).join('')}
+    </tbody></table>
+    <div style="font-size:11px;color:var(--text2);margin-top:6px">이 순서는 AC-030(양정)·AC-031(급수방식)·AC-032(수조)·AC-033(펌프)의 계산 순서와 같다. 앱끼리 자동으로 연결하지 않는다 — 입력칸 옆 「← 용량부하 ①」·「← 카탈로그(P_max)」 표시를 보고 직접 옮겨 적는다.</div>
+  </div>`;
   h+=`<div class="section"><div class="section-title">작업 순서 — 5분이면 계산서가 나옵니다</div>`;
   h+=step(1,'급수 방식 선택','<strong>① 계통 설정</strong> 탭에서 부스터펌프식 / 고가수조식 중 선택합니다. 방식에 따라 입력 항목과 계통도가 자동으로 달라집니다.');
-  h+=step(2,'사양 입력','펌프 사양(대수·토출압·관경) 또는 고가수조(저수위 높이), 그리고 건물 층수·층고·적정 급수압을 입력합니다.');
+  h+=step(2,'사양 입력','펌프 사양(대수·토출압·관경) 또는 고가수조(저수위 높이), 그리고 건물 층수·층고·설계 목표압력(참고)을 입력합니다.');
   h+=step(3,'층별 압력표 확인','자동 계산된 층별 압력에서 <span class="warn-chip">감압필요</span>는 PRV 설치 대상, <span class="bad-chip">압력부족</span>은 펌프 양정(또는 수조 높이) 재검토 대상입니다. 감압비 3:1 초과 경고가 뜨면 2단 감압을 검토하세요.');
   h+=step(4,'재질 프리셋 확인','기본값 <strong>STS 표준</strong>(소구경 STS 나사식 / 대구경 덕타일주철+STS디스크)이 자동 적용됩니다. 병원 등 고급 사양은 전체 STS로 변경하세요. 선정 근거는 ④ 가이드 첫 카드에 있습니다.');
   h+=step(5,'입상관 구성','<strong>+ 입상관 추가</strong> → 관경과 담당층을 입력하면 PRV 필요 여부가 자동 판정됩니다. 이어서 층별 주관과 화장실(Zone)을 추가하세요 — 화장실 수만큼 차단 볼밸브가 잡힙니다.');
@@ -902,26 +952,32 @@ function renderSettings(){
     <div class="section-title">${S.system==='booster'?'펌프 사양':'고가수조 사양'}</div>`;
   if(S.system==='booster'){
     h+=`<div class="form-row">
-      <span class="form-label">주펌프 대수</span>
+      <span class="form-label">펌프 구성</span>
       <select onchange="setPumpMode(this.value)">
         <option value="1"${P.count===1?' selected':''}>1대 (단독)</option>
         <option value="2s"${P.count===2&&P.set?' selected':''}>2대 (1대 예비, SET) — 한 스키드, 펌프별 밸브 1조</option>
         <option value="2"${P.count===2&&!P.set?' selected':''}>2대 (단독) — 따로 설치, 펌프별 밸브 2조</option>
         <option value="3"${P.count===3?' selected':''}>3대 (단독)</option>
       </select>
+      ${srcTag('용량부하 ③')}
+      ${P.count===1?'<span style="font-size:11px;color:var(--warn)">⚠ KDS 31 30 15 4.6.2(2) — 자동부스터 펌프는 2대 이상</span>':''}
     </div>
     <div class="form-row">
-      <span class="form-label">토출압력 (kgf/cm²)</span>
+      <span class="form-label">토출압 P<sub>op</sub> (kgf/cm²)</span>
       <input class="form-inp sm" type="number" step="0.5" value="${P.pressure}" onchange="setPump('pressure',+this.value)">
+      ${kpaTag(P.pressure)} ${srcTag('카탈로그(P_op)')}
+      <span style="font-size:11px;color:var(--text2)">설계 유량 운전점의 토출압</span>
     </div>
     <div class="form-row">
-      <span class="form-label">정지양정 최대압 P<sub>max</sub> (kgf/cm²)</span>
+      <span class="form-label">최대압 P<sub>max</sub> — 정지양정 (kgf/cm²)</span>
       <input class="form-inp sm" type="number" step="0.1" min="0" value="${P.pressureMax||''}" placeholder="—" onchange="setPump('pressureMax',this.value?+this.value:0)">
+      ${kpaTag(P.pressureMax)} ${srcTag('카탈로그(P_max)')}
       <span style="font-size:11px;color:var(--text2)">유량 0 점(제조사 Q-H 곡선) — PRV 존 판정(550 kPa)에만 사용. 미입력이면 토출압으로 <b>예비</b> 판정 (명세 7.4·7.5)</span>
     </div>
     <div class="form-row">
-      <span class="form-label">토출유량 (L/min)</span>
+      <span class="form-label">설계 유량 Q (L/min)</span>
       <input class="form-inp sm" type="number" value="${P.flow}" onchange="setPump('flow',+this.value)">
+      ${srcTag('용량부하 ④')}
       <span style="font-size:11px;color:var(--text2)">유닛 <strong>전체</strong> 유량 (KDS 31 30 15 4.6.2)</span>
     </div>
     <div class="form-row" style="align-items:flex-start">
@@ -944,6 +1000,11 @@ function renderSettings(){
       <span class="form-label">수조 저수위 높이 (m)</span>
       <input class="form-inp sm" type="number" step="0.5" value="${B.tankHeight??3}" onchange="setBuilding('tankHeight',+this.value)">
       <span style="font-size:11px;color:var(--text2)">최상층 지붕(옥상 바닥) 기준 수조 저수위까지 높이</span>
+    </div>
+    <div class="form-row">
+      <span class="form-label">최대 급수량 (L/s)</span>
+      <input class="form-inp sm" type="number" step="0.1" min="0" value="${TK().inflowLps||''}" placeholder="—" onchange="setTank('inflowLps',+this.value)">
+      <span style="font-size:11px;color:var(--text2)">수조로 들어오는 최대 유량 — 오버플로 관경 산정용. 현재 <strong>${esc(overflowSize().txt.split(' — ')[0])}</strong></span>
     </div>`;
   }
   h+=`<div class="form-row">
@@ -994,14 +1055,8 @@ function renderSettings(){
       </div>
       <div class="form-row">
         <span class="form-label">더블체크밸브</span>
-        <select onchange="setInlet('dcv',this.value)">
-          <option value="auto"${I.dcv==='auto'?' selected':''}>자동 판정 (유입방식·바이패스에 따름)</option>
-          <option value="force"${I.dcv==='force'?' selected':''}>강제 적용 (관할 승인조건)</option>
-          <option value="off"${I.dcv==='off'?' selected':''}>제외</option>
-        </select>
-        <span style="font-size:11px;color:${dcv.on?SC.prv:'var(--text2)'}">
-          현재: <strong>${dcv.on?'적용':'미적용'}</strong> — ${esc(dcv.why)}
-        </span>
+        <span style="font-size:12px"><strong>필수</strong></span>
+        <span style="font-size:11px;color:var(--text2)">${esc(dcv.why)}</span>
       </div>
       <div class="form-row">
         <span class="form-label">인입압 압력계</span>
@@ -1009,6 +1064,14 @@ function renderSettings(){
           <option value="1"${I.pg?' selected':''}>설치 (게이지콕 포함)</option>
           <option value="0"${!I.pg?' selected':''}>미설치</option>
         </select>
+      </div>
+      <div class="form-row">
+        <span class="form-label">LCV 형식</span>
+        <select onchange="setInlet('lcvType',this.value)">
+          <option value="balltap"${I.lcvType!=='electric'?' selected':''}>정수위 볼탭식 (파일럿·완폐)</option>
+          <option value="electric"${I.lcvType==='electric'?' selected':''}>전동·전자식 (급폐쇄)</option>
+        </select>
+        <span style="font-size:11px;color:var(--text2)">전동·전자식이면 LCV 토출측 수격방지기 추가 (KDS 31 30 15 4.8)</span>
       </div>
       <div class="form-row">
         <span class="form-label">LCV 바이패스</span>
@@ -1027,9 +1090,16 @@ function renderSettings(){
         </span>
       </div>
       <div class="form-row">
+        <span class="form-label">최대 급수량 (L/s)</span>
+        <input class="form-inp sm" type="number" step="0.1" min="0" value="${TK().inflowLps||''}"
+          placeholder="—" onchange="setTank('inflowLps',+this.value)">
+        <span style="font-size:11px;color:var(--text2)">저수조로 들어오는 최대 유량(인입·LCV) — 오버플로 관경 산정용. 현재 <strong>${esc(overflowSize().txt.split(' — ')[0])}</strong></span>
+      </div>
+      <div class="form-row">
         <span class="form-label">유효용량 (㎥)</span>
         <input class="form-inp sm" type="number" step="0.1" min="0" value="${TK().effective||''}"
           placeholder="—" onchange="setTank('effective',+this.value)">
+        ${srcTag('용량부하 ①')}
         <span style="font-size:11px;color:var(--text2)">설비 계산용(참고). 상부 여유고·하부 사수 제외분 — 수위 계획은 AC-032 영역</span>
       </div>
       <div class="form-row">
@@ -1046,6 +1116,7 @@ function renderSettings(){
           <option value="auto"${TK().compart==='auto'?' selected':''}>자동 (용량 기준) — 현재 ${tankCompart()}칸</option>
           ${[1,2,3,4].map(n=>`<option value="${n}"${TK().compart===n?' selected':''}>${n}칸 지정</option>`).join('')}
         </select>
+        ${srcTag('용량부하 ②')}
         <span style="font-size:11px;color:var(--text2)">구획하면 LCV 세트 이후 인입관이 칸 수만큼 갈라집니다</span>
       </div>
       <div class="form-row">
@@ -1094,12 +1165,15 @@ function renderSettings(){
       <input class="form-inp sm" type="number" step="0.1" value="${B.floorHeight}" onchange="setBuilding('floorHeight',+this.value)">
     </div>
     <div class="form-row">
-      <span class="form-label">적정 급수압 (kgf/cm²)</span>
+      <span class="form-label">설계 목표압력 (kgf/cm²)</span>
       <input class="form-inp sm" type="number" step="0.1" value="${B.targetPressure}" onchange="setBuilding('targetPressure',+this.value)">
+      ${kpaTag(B.targetPressure)}
+      <span style="font-size:11px;color:var(--text2)">참고값 — 감압 판정에 쓰지 않음. 감압은 유량 0 최대압 550 kPa 이상 (KDS 31 30 15 4.7)</span>
     </div>
     <div class="form-row">
       <span class="form-label">감압밸브 설정압 (kgf/cm²)</span>
       <input class="form-inp sm" type="number" step="0.1" value="${B.prvPressure}" onchange="setBuilding('prvPressure',+this.value)">
+      ${kpaTag(B.prvPressure)}
     </div>
     <div class="form-row">
       <span class="form-label">메인 신축이음 확정 수량</span>
@@ -1132,7 +1206,7 @@ function renderSettings(){
     h+=`<div class="warn-banner">⚠️ 감압비 ${(p1/B.prvPressure).toFixed(1)} : 1 — 3:1 초과 시 PRV 소음·캐비테이션 우려, 2단 감압(직렬 PRV) 검토가 필요합니다.</div>`;
   }
   if(B.prvPressure>B.targetPressure){
-    h+=`<div class="warn-banner">⚠️ 감압밸브 설정압(${B.prvPressure})이 적정 급수압(${B.targetPressure})보다 높습니다. 설정압을 확인하세요.</div>`;
+    h+=`<div class="warn-banner">⚠️ 감압밸브 설정압(${B.prvPressure})이 설계 목표압력(참고 ${B.targetPressure})보다 높습니다. 설정압을 확인하세요.</div>`;
   }
   h+=`<div class="section">
     <div class="section-title">층별 압력 계산 ${S.system==='gravity'?'(고가수조 정수두 기준)':'(펌프 토출압 기준)'}</div>
@@ -1140,7 +1214,7 @@ function renderSettings(){
       <th>층</th><th>압력 (kgf/cm²)</th><th>상태</th>
     </tr></thead><tbody>`;
   for(let f=1;f<=B.floors;f++){
-    const p=floorPressure(f), over=p>B.targetPressure, fr=floorReqKPa(f), low=p*KGF2KPA<fr;
+    const p=floorPressure(f), over=overMax(floorPmax(f).p*KGF2KPA), fr=floorReqKPa(f), low=p*KGF2KPA<fr;
     h+=`<tr${over?' class="floor-warn"':low?' class="floor-low"':''}>
       <td>${f}층</td><td>${p.toFixed(2)} <span style="color:var(--text2)">(${(p*KGF2KPA).toFixed(0)} kPa)</span></td>
       <td>${!supplySet()?'<span class="warn-chip">입력 필요</span>':over?`<span class="warn-chip">감압필요 ▶ PRV</span>`:low?`<span class="bad-chip">압력부족 (${fr} kPa 미만)</span>`:`<span class="ok-chip">적정</span>`}</td>
@@ -1148,7 +1222,7 @@ function renderSettings(){
   }
   h+=`</tbody></table>
     <div style="font-size:11px;color:var(--text2);margin-top:8px">
-      ※ 정수두만 반영한 값이며 배관 마찰손실은 별도입니다. 필요압은 그 층을 담당하는 입상관의 말단 기구 기준(세정밸브 100 · 샤워 70 · 일반 55 kPa, 담당 없음 55).
+      ※ 압력은 운전 토출압 기준 정수두 값이며 배관 마찰손실은 별도입니다. 「감압필요」는 유량 0 최대압(P<sub>max</sub>, 미입력이면 토출압) 550 kPa 이상일 때 (KDS 31 30 15 4.7). 필요압은 그 층을 담당하는 입상관의 말단 기구 기준(샤워 혼합밸브 130 · 세정밸브 100 · 샤워 70 · 일반 55 kPa, 담당 없음 55).
       ${S.system==='gravity'?'<br>※ 고가수조식은 최상층부 압력 부족 시 최상층 전용 가압펌프(부스터) 설치를 검토하세요.':''}
     </div></div>`;
 
@@ -1165,7 +1239,8 @@ function renderSettings(){
     const pMax=groupMaxPressure(g);
     let prvChip='';
     if(pMax!=null){
-      const rec=pMax>B.targetPressure;
+      // 감압 권장 = 담당 최저층 유량 0 최대압 ≥ 550 kPa (존 판정과 같은 기준)
+      const gr=groupRange(g), rec=overMax(floorPmax(gr.lo).p*KGF2KPA);
       if(rec&&!g.prv) prvChip=`<span class="warn-chip">최대 ${pMax.toFixed(2)}kgf – PRV 권장</span>`;
       else if(!rec&&g.prv) prvChip=`<span class="warn-chip">최대 ${pMax.toFixed(2)}kgf – PRV 불필요 검토</span>`;
       else prvChip=`<span class="ok-chip">최대 ${pMax.toFixed(2)}kgf/cm²</span>`;
@@ -1176,8 +1251,8 @@ function renderSettings(){
     if(zc&&zc.need){
       const pre=zc.prelim?' <span style="color:var(--text2)">(예비 — P<sub>max</sub> 미입력)</span>':'';
       zoneBox=zc.msg
-        ?`<div class="warn-banner" style="margin:6px 0 0">⚠️ 존 판정: ${zc.lo}층 유량 0 최대압 ${zc.loKPa.toFixed(0)} kPa &gt; ${MAX_FIXTURE_KPA} kPa${pre}<br>${esc(zc.msg)}</div>`
-        :`<div style="font-size:11px;color:var(--accent2);margin-top:6px">✓ 존 판정: ${zc.lo}층 유량 0 최대압 ${zc.loKPa.toFixed(0)} kPa &gt; ${MAX_FIXTURE_KPA} kPa → 담당층 모두 감압됨${zc.floorPrv.length?` (B안 층 분기 PRV ${zc.floorPrv.join('·')}층)`:''}${pre}</div>`;
+        ?`<div class="warn-banner" style="margin:6px 0 0">⚠️ 존 판정: ${zc.lo}층 유량 0 최대압 ${zc.loKPa.toFixed(0)} kPa ≥ ${MAX_FIXTURE_KPA} kPa${pre}<br>${esc(zc.msg)}</div>`
+        :`<div style="font-size:11px;color:var(--accent2);margin-top:6px">✓ 존 판정: ${zc.lo}층 유량 0 최대압 ${zc.loKPa.toFixed(0)} kPa ≥ ${MAX_FIXTURE_KPA} kPa → 담당층 모두 감압됨${zc.floorPrv.length?` (B안 층 분기 PRV ${zc.floorPrv.join('·')}층)`:''}${pre}</div>`;
     }
     h+=`<div class="group-card">
       <div class="group-hdr">
@@ -1216,7 +1291,7 @@ function renderSettings(){
           </label>
           ${fp.prv?`<span style="font-size:11px;color:var(--text2)">2차압</span>
           <input class="zone-inp" type="number" step="0.1" min="0.5" max="10" style="width:52px" value="${fp.prvSet||''}" placeholder="${B.prvPressure}" onchange="setFloorPipeProp('${g.id}',${fi},'prvSet',this.value?+this.value:null)">
-          <span style="font-size:10px;color:var(--text2)">kgf/cm² · 유량 0 ${(floorPrvSet(fp)*KGF2KPA).toFixed(0)} kPa ${floorPrvSet(fp)*KGF2KPA>MAX_FIXTURE_KPA?'<b style="color:var(--warn)">&gt; 550</b>':'≤ 550'} · 적정압 ${B.targetPressure} 참고 (⚠ 기준 미결정) · 점검구 필수</span>`:''}
+          <span style="font-size:10px;color:var(--text2)">kgf/cm² · 유량 0 ${(floorPrvSet(fp)*KGF2KPA).toFixed(0)} kPa ${overMax(floorPrvSet(fp)*KGF2KPA)?'<b style="color:var(--warn)">≥ 550</b>':'&lt; 550'} · 설계 목표압력 ${B.targetPressure} 참고 (⚠ 기준 미결정) · 점검구 필수</span>`:''}
           <button class="btn btn-danger btn-sm" onclick="delFloorPipe('${g.id}',${fi})">✕</button>
         </div>`).join('')}
         ${!fps.length?`<span style="font-size:11px;color:var(--text2)">층별 주관 없음</span>`:''}
@@ -1619,6 +1694,8 @@ function renderDiagram(){
     s+=symST(CX,LCV_TOP+38);
     s+=symLCV(CX,LCV_Y);
     s+=svgLine(CX,LCV_Y+11,CX,LCV_BOT);
+    // 전동·전자식 LCV — 토출측 1 m 이내 수격방지기 (U4)
+    if(_I.lcvType==='electric'){ const wy=LCV_Y+20; s+=svgLine(CX,wy,CX-30,wy); s+=symWH(CX-30,wy); }
     s+=symShut(CX,LCV_BOT-22,7);
     // 유입배관 배수용 밸브 — 기준: IN-002 4.3
     s+=svgLine(CX,LCV_BOT-6,CX-30,LCV_BOT-6);
@@ -1711,14 +1788,15 @@ function renderDiagram(){
       s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv1,8,'GV');
       s+=symST(px,PUMP_SUCK_Y+COMP_OFFSETS.st);
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj1);
-      // 흡입 압력계 — 펌프 흡입 측면 (명세 3.6, 2026-10-22). 패키지 포함이면 그리지 않는다
-      if(!PKG().pg){
-        const pgY=PUMP_SUCK_Y+(COMP_OFFSETS.fj1+COMP_OFFSETS.pump)/2-6;
-        s+=svgLine(px,pgY,px-20,pgY);
-        s+=symPG(px-30,pgY,'');
-        s+=svgText(px-44,pgY+4,'PG',SC.pg,8,'end');
-      }
       s+=symPump(px,PUMP_SUCK_Y+COMP_OFFSETS.pump,18,pumpLabels[i]);
+      // 토출 압력계 — 펌프 토출 측면 (명세 3.6, 2026-10-28 정정: 흡입측 없음). 패키지 포함이면 그리지 않는다
+      if(!PKG().pg){
+        // 펌프 몸체 아래쪽(토출 쪽) 측면에서 오른쪽으로 뺀다 — 펌프 이름표와 겹치지 않게
+        const pgY=PUMP_SUCK_Y+COMP_OFFSETS.pump+8;
+        s+=svgLine(px+16,pgY,px+42,pgY);
+        s+=symPG(px+52,pgY,'');
+        s+=svgText(px+66,pgY+4,'PG',SC.pg,8,'start');
+      }
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj2);
       s+=svgText(px-7,PUMP_SUCK_Y+COMP_OFFSETS.fj2+18,pumpPipe,TH.text2,8,'end');
       // 수격방지기는 첵밸브 상류측(펌프측) — 학회 3.3.7 (1) 2). 첵밸브 파손 방지
@@ -1941,7 +2019,7 @@ function renderValveList(){
   if(floorPrvs.length){
     h+=`<div class="warn-banner">⚠️ 층 분기 PRV(B안, 명세 7.5): `;
     h+=floorPrvs.map(({g,fp})=>`<strong>${esc(g.name)} ${esc(String(fp.floorNo))}층</strong> ${esc(fp.pipe||g.pipe)} — 2차 ${floorPrvSet(fp)} kgf/cm²${(+fp.qty||1)>1?` ×${+fp.qty}개소`:''}`).join(' / ');
-    h+=` · 층 분기 직후 P/S·천장 내부, <b>점검구 필수</b>${IN().prvBypass?' · 바이패스(평상시 닫힘·잠금)':' · 바이패스 제외'}<br><span style="font-size:11px">⚠ 2차 설정압 기준(적정압 ${S.building.targetPressure} kgf/cm² vs 존 필요압+마찰·유량 0 ≤ ${MAX_FIXTURE_KPA} kPa)은 사용자 결정 대기 — 두 값을 함께 확인하세요.</span></div>`;
+    h+=` · 층 분기 직후 P/S·천장 내부, <b>점검구 필수</b>${IN().prvBypass?' · 바이패스(평상시 닫힘·잠금)':' · 바이패스 제외'}<br><span style="font-size:11px">⚠ 2차 설정압 기준(설계 목표압력 ${S.building.targetPressure} kgf/cm²(참고) vs 존 필요압+마찰·유량 0 < ${MAX_FIXTURE_KPA} kPa)은 사용자 결정 대기 — 두 값을 함께 확인하세요.</span></div>`;
   }
   if(warnings&&warnings.length){
     h+=`<div class="warn-banner">🔎 <strong>자동 검증</strong><ul style="margin:6px 0 0 18px;padding:0">`
@@ -2281,7 +2359,7 @@ function renderGuide(){
      tip:'LCV 고장은 저수조 월류(넘침) 사고로 직결됩니다. 볼탭 백업과 오버플로우관 상태를 정기 점검하세요.'},
     {icon:'◇',color:SC.prv,badge:'감압',title:'감압밸브 (PRV)',svg:gdPRV(),
      body:`<strong>원리</strong> : 스프링과 다이어프램의 힘겨루기 — 2차측 압력이 스프링 설정값보다 오르면 밸브가 조여지고, 낮아지면 열려서 2차압이 항상 일정하게 유지됩니다.<br>1차 고압을 2차 설정압으로 자동 감압합니다.<br>저층부 과압 방지를 위해 설치합니다.<br>전후 게이트밸브 + Y형 스트레이너 + 1·2차 압력계를 세트로 구성합니다. 바이패스는 기본 제외입니다 — 열면 감압되지 않은 상류압이 그대로 하류로 가므로, 정비 중 급수가 필요하면 병렬 2열 PRV 로 합니다 (IN-001 1.3.10.3).`,
-     tip:`설정압(현재 ${S.building.prvPressure}kgf/cm²)은 적정 급수압(${S.building.targetPressure}kgf/cm²) 이하로 설정합니다. 감압비가 3:1을 초과하면 소음·캐비테이션 우려가 있어 2단 감압을 검토하세요. ${IN().prvBypass?'바이패스를 설치했다면 평상시 닫힘·잠금으로 관리합니다.':'바이패스를 제외했으므로 PRV 정비 중 단수 여부를 운영 측과 확인하세요.'}`},
+     tip:`설정압(현재 ${S.building.prvPressure}kgf/cm²)은 설계 목표압력(참고 ${S.building.targetPressure}kgf/cm²) 이하로 설정합니다. 감압비가 3:1을 초과하면 소음·캐비테이션 우려가 있어 2단 감압을 검토하세요. ${IN().prvBypass?'바이패스를 설치했다면 평상시 닫힘·잠금으로 관리합니다.':'바이패스를 제외했으므로 PRV 정비 중 단수 여부를 운영 측과 확인하세요.'}`},
     {icon:'○',color:SC.globe,badge:'유량조절',title:'글로브밸브',svg:gdGlobe(),
      body:`<strong>원리</strong> : 수도꼭지와 같은 구조 — 핸들을 돌려 디스크를 조금씩 내리면 틈새 크기가 변하며 유량이 조절됩니다.<br>유량의 미세 조절이 가능합니다.<br>감압밸브 바이패스 배관에서 수동 압력 조절용으로 사용합니다.<br>유체 저항이 커서 메인 배관에는 사용하지 않습니다.`,
      tip:'바이패스 운전 시 서서히 열어 하류 압력을 확인하면서 조절하세요. 급격한 개방은 하류 배관에 충격을 줄 수 있습니다.'},
@@ -2437,6 +2515,7 @@ function setPkg(k,v){ PKG()[k]=v; renderAll(); }
 function setTank(k,v){
   if(k==='volume')v=clampNum(v,0,10000,20);
   if(k==='effective')v=clampNum(v,0,10000,0);
+  if(k==='inflowLps')v=clampNum(v,0,1000,0);
   TK()[k]=v; renderAll();
 }
 // 저장본 보정 — 구 버전에는 inlet·tank·pumpPkg 가 없다
