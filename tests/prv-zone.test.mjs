@@ -48,7 +48,7 @@ test('B안 층 분기 PRV — 그룹 PRV 세트와 같은 구성·순서, 관경
   assert.equal(bp.qty,0); assert.equal(bp.grade,app.run('GRADE.EXC'));
   // 설정압 미입력 = 감압밸브 설정압, 두 기준 함께 표시
   const prv=rows.find(i=>i.name==='감압밸브');
-  assert.match(prv.note,/설정압 2\.5kgf/); assert.match(prv.note,/적정압 3/); assert.match(prv.note,/550 kPa/);
+  assert.match(prv.note,/설정압 2\.5kgf/); assert.match(prv.note,/설계 목표압력 3\(참고\)/); assert.match(prv.note,/550 kPa/);
   // 층 분기 BV 바로 다음에 PRV 세트
   const iBV=r.list.findIndex(i=>i.spec==='볼밸브(1층 주관 차단)');
   assert.equal(r.list[iBV+1].pos,'입상관 1 1층 분기 PRV 입구');
@@ -65,7 +65,7 @@ test('층 분기 PRV 수량이 집계(합계)에 들어간다 — qty 개소만�
   assert.equal(s1['게이트밸브']-s0['게이트밸브'],4);
   assert.equal(s1['Y형 스트레이너']-s0['Y형 스트레이너'],2);
   assert.equal(s1['압력계']-s0['압력계'],4);
-  assert.equal(s1['릴리프밸브']-s0['릴리프밸브'],2);   // 1층 상류 6.0 > 적정압 3.0
+  assert.equal(s1['릴리프밸브']-s0['릴리프밸브'],2);   // 1층 상류 유량 0 최대압 588 kPa ≥ 550 (CH-20261123-03)
 });
 
 test('바이패스 「설치」면 층 분기 PRV 에도 바이패스 행이 붙는다', ()=>{
@@ -88,7 +88,7 @@ test('그룹 PRV 세트 행은 리팩터링 전과 같다 (위치·규격·비�
     ['입상관 1 PRV','압력계(2차압, 게이지콕 포함)',1,'PRV 후'],
     ['입상관 1 PRV 출구','게이트밸브(출구차단)',1,'PRV 출구'],
     ['입상관 1 바이패스','— 미적용 —',0,''],
-    ['입상관 1 PRV 하류','릴리프밸브(하류 과압 방출)',1,'PRV 고장 시 하류 보호 — 상류 6.0 > 적정압 3 kgf/cm²'],
+    ['입상관 1 PRV 하류','릴리프밸브(하류 과압 방출)',1,'PRV 고장 시 하류 보호 — 상류 유량 0 최대압 588 kPa ≥ 550 kPa'],
   ]);
 });
 
@@ -152,7 +152,7 @@ test('화면 렌더 — 설정·계통도·목록에 층 분기 PRV 가 나타�
   const app=load(); base(app,`S.groups[0].floorPipes[0].prv=true;`);
   app.run('renderSettings();renderDiagram();renderValveList();');
   assert.match(app.els.settingsPanel.innerHTML,/층 분기 PRV/);
-  assert.match(app.els.settingsPanel.innerHTML,/정지양정 최대압/);
+  assert.match(app.els.settingsPanel.innerHTML,/최대압 P<sub>max<\/sub> — 정지양정/);
   assert.match(app.els.diagramPanel.innerHTML,/1층 분기 40A/);
   assert.match(app.els.diagramPanel.innerHTML,/B안 · 점검구 필수/);
   assert.match(app.els.valvePanel.innerHTML,/층 분기 PRV\(B안/);
