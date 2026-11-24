@@ -65,13 +65,13 @@ test('1-4 층별 표·입상관 칩 — 550 kPa 기준, targetPressure 와 무�
   app.run('renderSettings()');
   const h=app.els.settingsPanel?.innerHTML||Object.values(app.els).map(e=>e.innerHTML).join('');
   assert.doesNotMatch(h,/감압필요 ▶ PRV/);      // 392 kPa < 550
-  assert.doesNotMatch(h,/PRV 권장/);
+  assert.doesNotMatch(h,/감압 존이 필요합니다/);   // CH-20261124-04: 입상관 칩 → 위반 띠
   assert.match(h,/설계 목표압력/);
   base(app,`S.pump.pressure=6;`);
   app.run('renderSettings()');
   const h2=Object.values(app.els).map(e=>e.innerHTML).join('');
   assert.match(h2,/감압필요 ▶ PRV/);           // 1층 588 kPa
-  assert.match(h2,/PRV 권장/);
+  assert.match(h2,/감압 존이 필요합니다/);
 });
 
 test('1-5 needsPRV 삭제', ()=>{
@@ -79,13 +79,24 @@ test('1-5 needsPRV 삭제', ()=>{
   assert.equal(app.run('typeof needsPRV'),'undefined');
 });
 
-test('1-6 펌프 흡입측 압력계 없음 — 토출측만', ()=>{
+test('1-6 → CH-20261124-01 펌프 흡입측 연성계(게이지콕 포함) 기본, 흡입측 압력계 없음, 토출 압력계 유지', ()=>{
   const app=load(); base(app);
-  const r=app.run('calcValves()');
+  let r=app.run('calcValves()');
   assert.equal(live(r).filter(i=>i.pos==='펌프 흡입측'&&i.name==='압력계').length,0);
-  assert.equal(r.list.filter(i=>i.pos==='펌프 흡입측'&&i.name==='압력계'&&i.grade==='EXCLUDED').length,1);
+  const cg=live(r).filter(i=>i.pos==='펌프 흡입측'&&i.name==='연성계');
+  assert.equal(cg.length,1); assert.equal(cg[0].spec,'연성계(펌프 흡입압, 게이지콕 포함)'); assert.equal(cg[0].grade,'DEFAULT');
   assert.equal(live(r).filter(i=>i.pos==='펌프 토출측'&&i.name==='압력계').length,1);
   assert.doesNotMatch(JSON.stringify(r.list),/흡입압과의 차/);
+  // CH-03 예시(8층·펌프 2대 SET): 압력계 5 + 연성계 1조
+  app.run(`S.building.floors=8; S.building.floorHeight=3.5; S.pump.pressure=7; S.pump.pressureMax=8; S.tank.volume=20; S.pump.inletPipe='50A';
+    S.groups=[{id:'g1',name:'저층',pipe:'65A',prv:true,fromFloor:1,toFloor:3,flowLpm:300,horizLen:30,reqKPa:100,floorPipes:[],zones:[{name:'화장실',pipe:'40A',fvCnt:4}]},
+              {id:'g2',name:'고층',pipe:'50A',prv:false,fromFloor:4,toFloor:8,flowLpm:250,horizLen:30,reqKPa:100,floorPipes:[],zones:[]}];
+    setPumpMode('2s');`);
+  r=app.run('calcValves()');
+  assert.equal(r.summary['압력계'],5); assert.equal(r.summary['연성계'],1);
+  // 단독 3대면 3개, 패키지 포함이면 외부 산출에서 뺀다
+  app.run(`setPumpMode('3');`); assert.equal(app.run('calcValves()').summary['연성계'],3);
+  app.run(`S.pumpPkg.pg=true;`); assert.equal(app.run('calcValves()').summary['연성계'],0);
 });
 
 test('2-6 최저 필요압 130 kPa 선택지 — 말단 판정에 쓰인다', ()=>{
@@ -177,8 +188,8 @@ test('CH-06 받는 칸 출처 표시 · kPa 환산 · 안내 탭 순서표(④ �
   const st=app.els.settingsPanel.innerHTML, hp=app.els.helpPanel.innerHTML;
   // 용량부하 상자 번호 순서 ①유효용량 ②칸 수 ③펌프 구성 ④Q, 카탈로그 P_op·P_max
   for(const t of ['← 용량부하 ①','← 용량부하 ②','← 용량부하 ③','← 용량부하 ④','← 카탈로그(P_op)','← 카탈로그(P_max)']) assert.ok(st.includes(t),t);
-  assert.match(st,/토출압 P<sub>op<\/sub>[\s\S]*= 686 kPa[\s\S]*← 카탈로그\(P_op\)/);
-  assert.match(st,/최대압 P<sub>max<\/sub>[\s\S]*= 785 kPa[\s\S]*← 카탈로그\(P_max\)/);
+  assert.match(st,/토출압 P<sub>op<\/sub>[\s\S]*?← 카탈로그\(P_op\)[\s\S]*?= 686 kPa/);
+  assert.match(st,/최대압 P<sub>max<\/sub>[\s\S]*?← 카탈로그\(P_max\)[\s\S]*?= 785 kPa/);
   assert.match(st,/감압밸브 설정압[\s\S]*?= 245 kPa/);
   assert.match(hp,/앱 간 값 옮기기 순서/);
   assert.match(hp,/<tr style="font-weight:700"><td><strong>④<\/strong><\/td><td><strong>밸브<\/strong>/);

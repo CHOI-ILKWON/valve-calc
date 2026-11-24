@@ -94,7 +94,75 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
 .modal-inp{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:14px;font-family:inherit;margin-bottom:12px}
 .modal-inp:focus{outline:none;border-color:var(--accent)}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end}
-.page{padding:16px;max-width:1100px}
+.page{padding:16px;max-width:1200px;margin:0 auto}
+/* CH-20261124-04 설정 화면 (웹앱_화면_기준.md) */
+.vs-wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.vs-main{flex:999 1 620px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.vs-side{flex:1 1 280px;max-width:360px;display:flex;flex-direction:column;gap:12px;position:sticky;top:64px;max-height:calc(100vh - 76px);overflow-y:auto}
+.vs-sec{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;scroll-margin-top:64px}
+.vs-h{margin:0;font-size:15px;font-weight:700;color:var(--text)}
+.vs-hrow{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+.vs-hr{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.vs-sub{font-size:12px;color:var(--text2)}
+.vs-grid2,.vs-grid3,.vs-grid4{display:grid;gap:12px}
+.vs-grid2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.vs-grid3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.vs-grid4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:0}
+.lbl{font-size:12px;color:var(--text2);font-weight:600;line-height:1.4}
+.fld-note{font-size:11px;color:var(--text2);line-height:1.5}
+.f-inp{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 9px;border-radius:6px;font-size:13px;font-family:inherit;width:100%;min-width:0;height:34px}
+.f-inp:focus{outline:none;border-color:var(--accent)}
+.f-inp.std,label.std{opacity:.55}
+.f-inp.std:hover,.f-inp.std:focus{opacity:1}
+.f-fixed{font-size:13px;padding:7px 0;color:var(--text)}
+.inp-unit{display:flex;gap:8px;align-items:center}
+.inp-unit .f-inp{flex:1 1 90px}
+.inp-unit .kpa-tag{flex:0 0 auto}
+.paste-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.paste-row textarea{flex:1 1 300px;min-width:0;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 10px;font-family:ui-monospace,Consolas,monospace;font-size:12px;resize:vertical}
+.src-tag{font-weight:400}
+.viol-band{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:8px;background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.45);color:var(--red);font-size:13px}
+.btn-viol{background:var(--red);color:#fff;font-weight:700;padding:8px 14px;font-size:13px}
+.ok-txt{font-size:12px;color:var(--accent2);font-weight:700}
+.zone-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.zone-card.bad{border-color:rgba(248,81,73,.5)}
+.zone-line{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font-size:13px}
+.zone-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--text2)}
+.sm{font-size:11px}
+.nw{white-space:nowrap}
+.vs-more>summary,.vs-std>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--accent)}
+.vs-more>summary::-webkit-details-marker,.vs-std>summary::-webkit-details-marker{display:none}
+.vs-more[open]>summary{margin-bottom:8px}
+.vs-std>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--text);font-size:14px}
+.vs-std[open] .sum-btn{display:none}
+.chg-badge{font-size:11px;font-weight:700;color:var(--warn);border:1px solid rgba(210,153,34,.5);border-radius:10px;padding:1px 8px;margin-left:6px}
+.chk-row{display:flex;flex-wrap:wrap;gap:16px;font-size:12px}
+.chk-row label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.std-box{padding:8px 10px;border-radius:6px;background:var(--surface2);margin-top:10px}
+.tbl-box{max-width:100%;overflow-x:auto}
+#valvePanel .section{overflow-x:auto}   /* 넓은 밸브 목록 표는 상자 안에서만 가로 스크롤 */
+.fr-tbl th{white-space:nowrap;line-height:1.3}
+.side-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.side-h{font-size:14px}
+.side-tbl{border-collapse:collapse;font-size:13px;width:100%}
+.side-tbl td{padding:5px 0;border-bottom:1px solid var(--border)}
+.side-tbl td:last-child{text-align:right;font-weight:700;padding-left:8px}
+.side-btns{display:flex;gap:8px;flex-wrap:wrap}
+.chk{display:flex;gap:10px;padding:8px 10px;border-radius:6px;text-decoration:none;font-size:12px;line-height:1.5;color:var(--text)}
+.chk-lv{font-weight:700;white-space:nowrap}
+.chk-v{background:rgba(248,81,73,.12);color:#ffb3ad}
+.chk-c{background:rgba(210,153,34,.12);color:#f0c870}
+.chk-n{background:var(--surface2);color:var(--text2)}
+.chk:hover{outline:1px solid var(--border)}
+.mark-v{color:var(--red);font-weight:700}
+.hmore{position:relative}
+.hmore>summary{list-style:none;cursor:pointer}
+.hmore>summary::-webkit-details-marker{display:none}
+.hmore-menu{position:absolute;right:0;top:36px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;z-index:150;min-width:150px}
+@media (max-width:600px){header{flex-wrap:wrap;height:auto;padding:8px 12px;row-gap:6px}#projectName{width:150px}.hbtns{margin-left:0}}
+@media (max-width:760px){.vs-side{position:static;max-width:none;max-height:none;overflow:visible}}
 .fr{display:flex;align-items:center;gap:8px}
 .mb{margin-bottom:8px}
 .ml{margin-left:auto}
@@ -111,6 +179,11 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
     --hot:#bc4c00;--red:#a40e26;--purple:#6639ba;--text:#1f2328;--text2:#57606a;
   }
   header,.tabs-bar,#tabH{display:none!important}
+  .vs-side{position:static!important;max-width:none!important;max-height:none!important;overflow:visible!important}
+  .vs-more,.vs-std{display:block}
+  .chk-v{color:#a40e26}.chk-c{color:#7a5901}
+  .f-inp.std,label.std{opacity:1}
+  #valvePanel .section,.tbl-box{overflow:visible!important}
   .print-only{display:block}
   .tab-pane{display:block!important;min-height:auto!important;page-break-after:always}
   body{background:#fff;color:#000}
@@ -128,12 +201,15 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
   <span class="logo">🔧 밸브 계통도 계산서</span>
   <input id="projectName" type="text" placeholder="프로젝트명">
   <div class="hbtns">
-    <button class="btn btn-ghost" onclick="window.print()">🖨 PDF</button>
-    <button class="btn btn-success" onclick="saveJSON()">💾 저장</button>
-    <button class="btn btn-ghost" onclick="exportCSV()">📊 엑셀</button>
-    <label class="btn btn-ghost" style="cursor:pointer">📂 불러오기<input type="file" accept=".json" style="display:none" onchange="loadJSON(event)"></label>
-    <label class="btn btn-warn" style="cursor:pointer">🔗 급수앱 연동<input type="file" accept=".json" style="display:none" onchange="loadWaterApp(event)"></label>
-    <button class="btn btn-danger" onclick="resetAll()">🔄 초기화</button>
+    <label class="btn btn-ghost" style="cursor:pointer">불러오기<input type="file" accept=".json" style="display:none" onchange="loadJSON(event)"></label>
+    <button class="btn btn-success" onclick="saveJSON()">저장</button>
+    <details class="hmore"><summary class="btn btn-ghost" aria-label="더보기">더보기 ▾</summary>
+      <div class="hmore-menu">
+        <button class="btn btn-ghost" onclick="window.print()">PDF 인쇄</button>
+        <button class="btn btn-ghost" onclick="exportCSV()">엑셀(CSV)</button>
+        <label class="btn btn-ghost" style="cursor:pointer">급수앱 연동<input type="file" accept=".json" style="display:none" onchange="loadWaterApp(event)"></label>
+        <button class="btn btn-danger" onclick="resetAll()">초기화</button>
+      </div></details>
   </div>
 </header>
 <div class="tabs-bar">
@@ -268,6 +344,7 @@ const S={
   pumpPkg:pkgDefaults(),
   groups:[]
 };
+S.groups=[defaultGroup()];   // CH-20261124-04 — 입상관 1개·전 층·층 주관 모든 층 같음으로 시작
 let activeTab=0;
 
 // ── Calc ─────────────────────────────────────────────────────────────────────
@@ -474,7 +551,7 @@ function valveMat(name,pipe){
     case '플렉시블조인트': return 'STS 벨로우즈형';
     case '수격방지기': return 'STS 다이어프램식';
     case '압력탱크': return '다이어프램식(질소충전)';
-    case '압력계': return 'STS 케이스, 글리세린 충입';
+    case '압력계': case '연성계': return 'STS 케이스, 글리세린 충입';
     default: return '-';
   }
 }
@@ -631,9 +708,11 @@ function calcValves(){
       {grade:GRADE.DEF,dir:'수조 → 펌프'});
     pk(PK.fj,'펌프 흡입측','플렉시블조인트','플렉시블조인트(흡입·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
       {grade:GRADE.DEF});
-    // 2026-10-28 사용자 정정(명세 3.6, 루트 기준서 51.6) — 흡입측 압력계는 두지 않는다.
-    //   압력계는 저수조 인입부와 펌프 토출 측면에만. 흡입압은 저수조 수위로 본다. (CH-20261123-03)
-    skip('펌프 흡입측','압력계',pumpPipe,'흡입측 압력계 없음 — 압력계는 저수조 인입부·펌프 토출측 (2026-10-28 사용자 정정)');
+    // CH-20261124-01 (2026-11-24 사용자 결정) — 펌프 흡입측 연성계(부압·정압 모두 읽음)를 펌프마다(SET 이면 조마다) 기본.
+    //   근거: 학회 2010 제2편 5.1.2·6.1(6) 「온도계 및 압력계를 부착」, KDS 31 25 25 4.1.3(5)② 「펌프의 입구와 출구에는 압력계」.
+    //   2026-10-28 「흡입측 압력계 없음」 정정은 이 결정으로 바뀐다. 토출 측면 압력계는 그대로.
+    pk(PK.pg,'펌프 흡입측','연성계','연성계(펌프 흡입압, 게이지콕 포함)',pumpPipe,pumpSets(),
+      `×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'} – 펌프 흡입 측면, 부압·정압 확인`,{grade:GRADE.DEF});
     // 기준: IN-001 1.3.9 a) — 흡입측에 체크밸브를 두지 않는다 (NPSH 여유)
     skip('펌프 흡입측','체크밸브',pumpPipe,'흡입측 체크밸브는 자동 적용하지 않는다 — NPSH 여유 감소 (IN-001 1.3.9 a)');
     pk(PK.fj,'펌프 토출측','플렉시블조인트','플렉시블조인트(토출·펌프 직근)',pumpPipe,pumpSets(),`×${pumpSets()}${S.pump.set&&P.count===2?'조 (2대 SET)':'대'}`,
@@ -769,7 +848,7 @@ function calcValves(){
 
   // Summary — 미적용(EXCLUDED) 품목은 수량산출에서 뺀다
   const names=['게이트밸브','버터플라이밸브','볼밸브','체크밸브','더블체크밸브','역류방지장치','감압밸브',
-    '글로브밸브','Y형 스트레이너','공기빼기밸브','배수밸브','압력계','압력탱크','수격방지기','신축이음',
+    '글로브밸브','Y형 스트레이너','공기빼기밸브','배수밸브','압력계','연성계','압력탱크','수격방지기','신축이음',
     '플렉시블조인트','유량계','수도계량기','볼탭','수위조절밸브(LCV)','수위 경보장치','이상수위 제어','경보 수신반','세목 스크린','릴리프밸브'];
   const summary={};
   for(const n of names) summary[n]=0;
@@ -840,8 +919,8 @@ function validateValves(list){
     if(fpv.length) W.push(`${g.name}: 층 분기 PRV(B안) ${fpv.map(fp=>fp.floorNo+'층').join('·')} — 층 분기 직후 P/S·천장 내부, 점검구 필수. 위치는 루트 검토에서 정해 기록하세요.`);
   }
   // 압력계 차단기구 — 규격 문자열에 게이지콕이 명시되어 있는지
-  for(const i of list) if(i.grade!==GRADE.EXC&&i.name==='압력계'&&!/게이지콕|차단/.test(i.spec))
-    W.push(`압력계(${i.pos})에 게이지콕·차단기구가 명시되지 않았습니다.`);
+  for(const i of list) if(i.grade!==GRADE.EXC&&(i.name==='압력계'||i.name==='연성계')&&!/게이지콕|차단/.test(i.spec))
+    W.push(`${i.name}(${i.pos})에 게이지콕·차단기구가 명시되지 않았습니다.`);
   // 밸브 관경과 연결배관 관경 — 인입부 품목은 인입관경을 따라야 한다
   const inletPipe=P.inletPipe||'50A';
   for(const i of list) if(i.grade!==GRADE.EXC&&i.pos==='수도 인입부'&&i.pipe!==inletPipe&&i.name!=='수격방지기')
@@ -863,7 +942,7 @@ function renderTab(i){
   if(i===3) renderValveList();
   if(i===4) renderGuide();
 }
-function renderAll(){persist();renderTab(activeTab);}
+function renderAll(){syncAll();persist();renderTab(activeTab);}
 
 // ── Autosave (localStorage) ───────────────────────────────────────────────────
 const LS_KEY='valveCalcState_v1';
@@ -928,500 +1007,460 @@ function renderHelp(){
 }
 
 // ── Tab 1: Settings ───────────────────────────────────────────────────────────
+// ── 설정 화면 (CH-20261124-04, 웹앱_화면_기준.md 1·2·4·5·6절, 시안 「밸브 ①·②」) ─────────
+//   화면 배치만 바꾼다. 입력 데이터(S)·계산·산출은 그대로.
+//   1 건물 → 2 받은 값(붙여넣기 + 카탈로그) → 3 입상관·감압 존 → 4 인입부·밸브 세트(회사 표준, 상세에서만 변경)
+//   오른쪽: 밸브 수량 요약 + 확인 목록(위반·확인·참고). 흩어진 경고는 확인 목록으로 모은다.
+
+// 받은 값 붙여넣기 — 용량부하 「▶ 옮겨 적을 값 › 한 줄로 복사」
+//   예: 펌프=2대(1대 예비,SET); Q=235 L/min; 총용량=12 ㎥; 유효=9.6 ㎥; 칸=자동; H=48 m
+//   자동 연결이 아니다. 사용자가 붙여 넣고 「칸에 넣기」를 누른다(2026-11-23 「직접 옮기기」 결정).
+const RECV_KEYS=[
+  ['pump',/^(펌프|주펌프|펌프구성|주펌프대수)$/],
+  ['flow',/^(q|유량|설계유량|토출유량|설계유량q)$/i],
+  ['volume',/^(총용량|저수조총용량|저수조용량)$/],
+  ['effective',/^(유효|유효용량)$/],
+  ['compart',/^(칸|칸수)$/],
+  ['head',/^(h|양정|양정h)$/i]];
+function parseReceived(txt){
+  const vals={}, unknown=[], errors=[];
+  for(const raw of String(txt||'').split(/[;\n]/)){
+    const part=raw.trim(); if(!part) continue;
+    const m=part.match(/^([^=:]+)[=:](.*)$/);
+    if(!m){ unknown.push(part); continue; }
+    const key=m[1].replace(/\s+/g,''), v=m[2].trim(), vn=v.replace(/\s+/g,'');
+    const hit=RECV_KEYS.find(([,re])=>re.test(key));
+    if(!hit){ unknown.push(part); continue; }
+    const k=hit[0], num=parseFloat(vn.replace(/,/g,''));
+    // 용량부하는 계산되지 않은 값을 「—」로 보낸다 → 칸을 그대로 두고 확인 목록에 남긴다
+    if(/^[—–-]+(㎥|m|L\/min)?$/.test(vn)){ errors.push(`${m[1].trim()} 값 없음(—) — 칸을 그대로 둠`); continue; }
+    if(k==='pump'){
+      if(/^1대/.test(vn)) vals.pump='1';
+      else if(/^2대/.test(vn)) vals.pump=/SET|예비/i.test(vn)?'2s':'2';
+      else if(/^3대/.test(vn)) vals.pump='3';
+      else errors.push(`펌프 구성 「${v}」을 읽지 못함`);
+    } else if(k==='compart'){
+      if(/자동|auto/i.test(vn)) vals.compart='auto';
+      else if(num>=1&&num<=4) vals.compart=Math.round(num);
+      else errors.push(`칸 수 「${v}」을 읽지 못함`);
+    } else if(!isFinite(num)) errors.push(`${part} — 숫자를 읽지 못함`);
+    else if(k==='flow') vals.flow=/(㎥|m3|m³)\/h/i.test(vn)?Math.round(num*1000/60):num;
+    else vals[k]=num;
+  }
+  return {vals,unknown,errors};
+}
+function applyReceived(txtArg){
+  const ta=typeof document!=='undefined'&&document.getElementById('recvPaste');
+  const txt=txtArg!=null?txtArg:(ta?ta.value:'');
+  const r=parseReceived(txt), v=r.vals;
+  if(v.pump){ S.pump.count=v.pump==='2s'?2:+v.pump; S.pump.set=(v.pump==='2s'); }
+  if(v.flow!=null) S.pump.flow=clampNum(v.flow,...NUM_RULES.pump.flow);
+  if(v.volume!=null) TK().volume=clampNum(v.volume,0,10000,20);
+  if(v.effective!=null) TK().effective=clampNum(v.effective,0,10000,0);
+  if(v.compart!=null) TK().compart=v.compart;
+  if(v.head!=null) S.pump.head=clampNum(v.head,0,1000,0);
+  S.received={text:txt,filled:Object.keys(v),unknown:r.unknown,errors:r.errors};
+  renderAll();
+}
+
+// 층 주관 「모든 층 같음」 — 담당층마다 같은 관경 1개. floorPipes 를 이 규칙으로 다시 만든다(계산은 floorPipes 를 그대로 쓴다)
+function syncFloorPipes(g){
+  if(g.allFloors){ g.fromFloor=1; g.toFloor=S.building.floors; }
+  if(!g.floorSame) return;
+  const r=groupRange(g); if(!r) return;
+  const old=g.floorPipes||[], out=[];
+  for(let f=r.lo;f<=r.hi;f++){
+    const e=old.find(x=>+x.floorNo===f)||{};
+    const fp={id:e.id||uid(),floorNo:f,pipe:g.floorPipe||'40A',qty:1};
+    if(e.prv){ fp.prv=true; if(e.prvSet) fp.prvSet=e.prvSet; }
+    out.push(fp);
+  }
+  g.floorPipes=out;
+}
+function syncAll(){ for(const g of S.groups||[]) syncFloorPipes(g); }
+function defaultGroup(){
+  return {id:uid(),name:'입상관 1',pipe:S.pump.mainPipe||'100A',prv:false,fromFloor:1,toFloor:S.building.floors,
+    allFloors:true,floorSame:true,floorPipe:'40A',floorPipes:[],zones:[]};
+}
+
+// ── 감압 존 나누기 (명세 7.5) ──
+//   A안: 기계실 분배헤더에서 저층 존 분리 + PRV 세트 1개 (그룹 하나를 저층·고층 둘로)
+//   B안: 한 입상관에 두고 저층 각 층 분기에 층 분기 PRV 세트
+//   경계층 k = 유량 0 최대압 550 kPa 이상인 가장 높은 층
+function zoneOverFloors(g){ const z=groupZoneCheck(g); return z?z.over:[]; }
+function zoneNeeds(g){ const z=groupZoneCheck(g); return !!(z&&z.msg); }
+function zonePair(g){
+  if(g.zoneRole==='low') return {low:g,high:S.groups.find(x=>x.id===g.zoneOf)};
+  return {low:S.groups.find(x=>x.zoneOf===g.id&&x.zoneRole==='low'),high:g};
+}
+function splitZoneA(gid,kForce){
+  const g=S.groups.find(x=>x.id===gid); if(!g) return;
+  const r=groupRange(g); if(!r) return;
+  const over=zoneOverFloors(g), k=kForce??(over.length?Math.max(...over):null);
+  if(k==null){ renderAll(); return; }
+  if(k>=r.hi){ g.prv=true; g.zonePlan='A'; renderAll(); return; }   // 전 층 과압 → 존 하나에 PRV 세트
+  const base=g.zoneBase||g.name;
+  const low={id:uid(),name:`${base} 저층 존`,pipe:g.pipe,prv:true,fromFloor:r.lo,toFloor:k,allFloors:false,
+    floorSame:g.floorSame,floorPipe:g.floorPipe,floorPipes:(g.floorPipes||[]).filter(fp=>+fp.floorNo<=k).map(fp=>({...fp,prv:false})),
+    zones:[],flowLpm:g.flowLpm,horizLen:g.horizLen,reqKPa:g.reqKPa,devLossKPa:g.devLossKPa,
+    zoneOf:g.id,zoneRole:'low',zonePlan:'A',zoneBase:base};
+  g.zoneBase=base; g.name=`${base} 고층 존`; g.allFloors=false; g.fromFloor=k+1; g.prv=false;
+  g.floorPipes=(g.floorPipes||[]).filter(fp=>+fp.floorNo>k).map(fp=>({...fp,prv:false}));
+  g.zoneRole='high'; g.zonePlan='A'; delete g.zoneB;
+  S.groups.splice(S.groups.indexOf(g),0,low);
+  renderAll();
+}
+function setFloorPrvB(g,k){
+  const r=groupRange(g); if(!r) return;
+  if(!g.floorPipes) g.floorPipes=[];
+  for(let f=r.lo;f<=r.hi;f++) if(!g.floorPipes.some(x=>+x.floorNo===f)) g.floorPipes.push({id:uid(),floorNo:f,pipe:g.floorPipe||'40A',qty:1});
+  g.floorPipes.sort((a,b)=>a.floorNo-b.floorNo);
+  for(const fp of g.floorPipes){ fp.prv=+fp.floorNo<=k; if(!fp.prv) delete fp.prvSet; }
+}
+function zoneToB(gid){
+  const g=S.groups.find(x=>x.id===gid); if(!g) return;
+  const {low,high}=zonePair(g); const h=high||g;
+  let k;
+  if(low&&low!==h){
+    k=+low.toFloor; h.fromFloor=low.fromFloor;
+    h.floorPipes=[...(low.floorPipes||[]),...(h.floorPipes||[])];
+    h.zones=[...(low.zones||[]),...(h.zones||[])];
+    S.groups=S.groups.filter(x=>x!==low);
+  } else k=h.zoneB??Math.max(...zoneOverFloors(h),+h.fromFloor||1);
+  h.prv=false; h.name=h.zoneBase||h.name; h.zoneRole=null; h.zonePlan='B'; h.zoneB=k;
+  if(+h.fromFloor===1&&+h.toFloor===S.building.floors) h.allFloors=true;
+  setFloorPrvB(h,k); renderAll();
+}
+function zoneToA(gid){
+  const g=S.groups.find(x=>x.id===gid); if(!g||g.zonePlan!=='B') return;
+  const k=g.zoneB; for(const fp of g.floorPipes||[]){ fp.prv=false; delete fp.prvSet; }
+  delete g.zoneB; g.zonePlan=null; splitZoneA(gid,k);
+}
+function zoneShift(gid,d){
+  const g=S.groups.find(x=>x.id===gid); if(!g) return;
+  if(g.zonePlan==='B'){
+    const r=groupRange(g); const k=Math.min(r.hi-1,Math.max(r.lo,(g.zoneB||r.lo)+d));
+    g.zoneB=k; setFloorPrvB(g,k); renderAll(); return;
+  }
+  const {low,high}=zonePair(g); if(!low||!high) return;
+  const k=Math.min(+high.toFloor-1,Math.max(+low.fromFloor,+low.toFloor+d));
+  low.toFloor=k; high.fromFloor=k+1;
+  const all=[...(low.floorPipes||[]),...(high.floorPipes||[])];
+  low.floorPipes=all.filter(fp=>+fp.floorNo<=k); high.floorPipes=all.filter(fp=>+fp.floorNo>k);
+  renderAll();
+}
+
+// ── 확인 목록 — 위반(빨강)·확인(주황)·참고(회색) ──
+function warnLevel(m){
+  if(/≥ 550|0개 — KDS|4\.6\.2|위반|없습니다|법정|2개 미만|중복|안 됩니다|명시되지|압력부족/.test(m)) return 'v';
+  if(/입력하세요|확인하세요|별도 확인|다릅니다|미입력|입력 필요|읽지 못함|넣지 않았/.test(m)) return 'c';
+  return 'n';
+}
+function warnTarget(m){
+  if(/550|PRV|존|층 차단|층 분기|입상관|말단|압력부족|감압/.test(m)) return 'sec3';
+  if(/펌프|P_max|P_op|토출압|양정|붙여넣기|칸 수/.test(m)) return 'sec2';
+  return 'sec4';
+}
+function settingsChecks(){
+  const B=S.building, P=S.pump, out=[];
+  if(S.system==='booster'&&!supplySet()) out.push('토출압 P_op 이 프로젝트 값으로 입력되지 않았습니다 — 말단 판정은 「입력 필요」. 카탈로그 값을 입력하세요.');
+  if(S.system==='booster'&&!(+P.pressureMax)) out.push('최대압 P_max 미입력 — 존 판정은 토출압 기준 예비 판정입니다. 카탈로그 정지양정을 입력하세요.');
+  const p1=floorPressure(1);
+  if(B.prvPressure>0&&p1/B.prvPressure>3) out.push(`감압비 ${(p1/B.prvPressure).toFixed(1)} : 1 — 3:1 초과 시 PRV 소음·캐비테이션 우려, 2단 감압(직렬 PRV) 검토 (사내·제조사 권고).`);
+  if(B.prvPressure>B.targetPressure) out.push(`감압밸브 설정압(${B.prvPressure})이 설계 목표압력(참고 ${B.targetPressure})보다 높습니다 — 설정압을 확인하세요.`);
+  for(const g of S.groups){
+    const r=groupFriction(g);
+    if(r&&r.ok===false) out.push(`${g.name}: 최상층 말단 ${r.endKPa.toFixed(0)} kPa < 필요 ${r.req} kPa — 압력부족 (마찰손실 검토).`);
+    if(S.system==='booster'&&+S.pump.flow>0&&+g.flowLpm>+S.pump.flow) out.push(`${g.name}: 입상관 유량 ${g.flowLpm} L/min 이 펌프 유량 ${S.pump.flow} L/min 초과 — 관경 앱 유량은 관경 선정용(산정 방법이 다름).`);
+  }
+  if(S.received&&(S.received.errors||[]).length) out.push('붙여넣기: '+S.received.errors.join(' · ')+' — 칸을 확인하세요.');
+  if(S.received&&(S.received.unknown||[]).length) out.push('붙여넣기: 모르는 항목 '+S.received.unknown.map(x=>`「${x}」`).join(' ')+' 은 넣지 않았습니다.');
+  out.push(`설계 목표압력 ${B.targetPressure} kgf/cm² (${Math.round(B.targetPressure*KGF2KPA)} kPa)는 참고값 — 감압 판정에 쓰지 않음.`);
+  return out;
+}
+function allChecks(){
+  const {warnings}=calcValves();
+  const items=[...warnings,...settingsChecks()].map(m=>({lv:warnLevel(m),msg:m,to:warnTarget(m)}));
+  const ord={v:0,c:1,n:2};
+  return items.sort((a,b)=>ord[a.lv]-ord[b.lv]);
+}
+function gotoSec(id){
+  if(activeTab!==1) switchTab(1);
+  const el=document.getElementById(id); if(!el) return;
+  el.querySelectorAll('details[data-autoopen]').forEach(d=>{ d.open=true; });
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// 회사 표준값(기본) — 상세에서 기본값은 흐리게, 바꾼 값은 진하게
+function stdDefaults(){
+  const I=inletDefaults(), K=pkgDefaults();
+  const o={mainPipe:'100A',inletPipe:'50A',pumpPipe:'65A',material:'sts',targetPressure:3,prvPressure:2.5,exConfirmed:0,
+    'tk.inflowLps':0,'tk.fireCombined':false};
+  for(const k of Object.keys(I)) if(k!=='dcv') o['in.'+k]=I[k];
+  for(const k of Object.keys(K)) o['pk.'+k]=K[k];
+  return o;
+}
+function curStd(){
+  const P=S.pump,B=S.building,I=IN(),T=TK(),K=PKG();
+  const o={mainPipe:P.mainPipe,inletPipe:P.inletPipe||'50A',pumpPipe:P.pumpPipe||'65A',material:S.material||'sts',
+    targetPressure:+B.targetPressure,prvPressure:+B.prvPressure,exConfirmed:+B.exConfirmed||0,
+    'tk.inflowLps':+T.inflowLps||0,'tk.fireCombined':!!T.fireCombined};
+  for(const k of Object.keys(inletDefaults())) if(k!=='dcv') o['in.'+k]=I[k];
+  for(const k of Object.keys(pkgDefaults())) o['pk.'+k]=!!K[k];
+  return o;
+}
+function changedStd(){ const d=stdDefaults(), c=curStd(); return Object.keys(c).filter(k=>c[k]!==d[k]); }
+
 function renderSettings(){
-  const P=S.pump, B=S.building;
-  let h='';
+  syncAll();
+  const P=S.pump, B=S.building, I=IN(), isBst=S.system==='booster';
+  const chg=changedStd(), isStd=k=>!chg.includes(k);
+  const sel=(k,opts,cur,on)=>`<select class="f-inp${isStd(k)?' std':''}" onchange="${on}">${opts.map(([v,l])=>`<option value="${v}"${String(v)===String(cur)?' selected':''}>${l}</option>`).join('')}</select>`;
+  const fld=(label,ctrl,extra='')=>`<div class="fld"><span class="lbl">${label}</span>${ctrl}${extra?`<span class="fld-note">${extra}</span>`:''}</div>`;
+  let h=`<div class="vs-wrap"><div class="vs-main">`;
 
-  // System type
-  h+=`<div class="section">
-    <div class="section-title">급수 방식</div>
-    <div class="system-cards">
-      <div class="sys-card${S.system==='booster'?' active':''}" onclick="setSystem('booster')">
-        <div class="sys-card-title">🔄 부스터펌프식</div>
-        <div class="sys-card-desc">저수조 + 부스터펌프 가압</div>
-      </div>
-      <div class="sys-card${S.system==='gravity'?' active':''}" onclick="setSystem('gravity')">
-        <div class="sys-card-title">🏛 고가수조식</div>
-        <div class="sys-card-desc">옥상 고가탱크 + 중력 급수</div>
-      </div>
-    </div>
-  </div>`;
+  // ── 1 건물 ──
+  h+=`<section class="vs-sec" id="sec1"><h2 class="vs-h">1. 건물</h2>
+    <div class="vs-grid3">
+      ${fld('층수',`<input class="f-inp" type="number" min="1" value="${B.floors}" onchange="setBuilding('floors',+this.value)" aria-label="층수">`)}
+      ${fld('층고 m',`<input class="f-inp" type="number" step="0.1" value="${B.floorHeight}" onchange="setBuilding('floorHeight',+this.value)" aria-label="층고">`)}
+      ${fld('급수방식',`<select class="f-inp" onchange="setSystem(this.value)" aria-label="급수방식"><option value="booster"${isBst?' selected':''}>저수조 + 부스터펌프</option><option value="gravity"${!isBst?' selected':''}>고가수조 (중력)</option></select>`)}
+    </div></section>`;
 
-  // Pump / tank specs
-  h+=`<div class="section">
-    <div class="section-title">${S.system==='booster'?'펌프 사양':'고가수조 사양'}</div>`;
-  if(S.system==='booster'){
-    h+=`<div class="form-row">
-      <span class="form-label">펌프 구성</span>
-      <select onchange="setPumpMode(this.value)">
-        <option value="1"${P.count===1?' selected':''}>1대 (단독)</option>
-        <option value="2s"${P.count===2&&P.set?' selected':''}>2대 (1대 예비, SET) — 한 스키드, 펌프별 밸브 1조</option>
-        <option value="2"${P.count===2&&!P.set?' selected':''}>2대 (단독) — 따로 설치, 펌프별 밸브 2조</option>
-        <option value="3"${P.count===3?' selected':''}>3대 (단독)</option>
-      </select>
-      ${srcTag('용량부하 ③')}
-      ${P.count===1?'<span style="font-size:11px;color:var(--warn)">⚠ KDS 31 30 15 4.6.2(2) — 자동부스터 펌프는 2대 이상</span>':''}
-    </div>
-    <div class="form-row">
-      <span class="form-label">토출압 P<sub>op</sub> (kgf/cm²)</span>
-      <input class="form-inp sm" type="number" step="0.5" value="${P.pressure}" onchange="setPump('pressure',+this.value)">
-      ${kpaTag(P.pressure)} ${srcTag('카탈로그(P_op)')}
-      <span style="font-size:11px;color:var(--text2)">설계 유량 운전점의 토출압</span>
-    </div>
-    <div class="form-row">
-      <span class="form-label">최대압 P<sub>max</sub> — 정지양정 (kgf/cm²)</span>
-      <input class="form-inp sm" type="number" step="0.1" min="0" value="${P.pressureMax||''}" placeholder="—" onchange="setPump('pressureMax',this.value?+this.value:0)">
-      ${kpaTag(P.pressureMax)} ${srcTag('카탈로그(P_max)')}
-      <span style="font-size:11px;color:var(--text2)">유량 0 점(제조사 Q-H 곡선) — PRV 존 판정(550 kPa)에만 사용. 미입력이면 토출압으로 <b>예비</b> 판정 (명세 7.4·7.5)</span>
-    </div>
-    <div class="form-row">
-      <span class="form-label">설계 유량 Q (L/min)</span>
-      <input class="form-inp sm" type="number" value="${P.flow}" onchange="setPump('flow',+this.value)">
-      ${srcTag('용량부하 ④')}
-      <span style="font-size:11px;color:var(--text2)">유닛 <strong>전체</strong> 유량 (KDS 31 30 15 4.6.2)</span>
-    </div>
-    <div class="form-row" style="align-items:flex-start">
-      <span class="form-label"></span>
-      <span style="font-size:11px;color:var(--text2);line-height:1.7">
+  // ── 2 받은 값 ──
+  h+=`<section class="vs-sec" id="sec2"><div class="vs-hrow"><h2 class="vs-h">2. 받은 값${isBst?' 붙여넣기':''}</h2>`;
+  if(isBst){
+    const R=S.received||{};
+    h+=`<span class="vs-sub">용량부하 「▶ 옮겨 적을 값 › 한 줄로 복사」를 붙여넣으세요</span></div>
+      <div class="fld"><label class="lbl" for="recvPaste">붙여넣기</label>
+        <div class="paste-row"><textarea id="recvPaste" rows="2" placeholder="펌프=2대(1대 예비,SET); Q=235 L/min; 총용량=12 ㎥; 유효=9.6 ㎥; 칸=자동; H=48 m">${esc(R.text||'')}</textarea>
+        <button class="btn btn-primary" onclick="applyReceived()">칸에 넣기</button></div>
+        ${R.filled?`<span class="fld-note">${R.filled.length}칸 넣음${(R.errors||[]).length||(R.unknown||[]).length?' · ⚠ 확인 목록 참조':''}</span>`:''}
+      </div>
+      <div class="vs-grid3">
+        ${fld(`펌프 구성 ${srcTag('용량부하 ①')}`,`<select class="f-inp" onchange="setPumpMode(this.value)" aria-label="펌프 구성">
+            <option value="1"${P.count===1?' selected':''}>1대 (단독)</option>
+            <option value="2s"${P.count===2&&P.set?' selected':''}>2대 (1대 예비, SET)</option>
+            <option value="2"${P.count===2&&!P.set?' selected':''}>2대 (단독)</option>
+            <option value="3"${P.count===3?' selected':''}>3대 (단독)</option></select>`,P.count===1?'<span class="mark-v">⚠ KDS 4.6.2(2) 2대 이상</span>':(P.set&&P.count===2?'한 스키드, 펌프별 밸브 1조':''))}
+        ${fld(`설계 유량 Q L/min ${srcTag('용량부하 ②')}`,`<input class="f-inp" type="number" value="${P.flow}" onchange="setPump('flow',+this.value)" aria-label="설계 유량 Q">`,'유닛 전체 유량 (KDS 4.6.2)')}
+        ${fld(`저수조 총용량 ㎥ ${srcTag('용량부하 ③')}`,`<input class="f-inp" type="number" step="0.1" min="0" value="${TK().volume??20}" onchange="setTank('volume',+this.value)" aria-label="저수조 총용량">`,`${TANK_SPLIT_TON}㎥ 초과면 구획 — 법 판정 기준`)}
+        ${fld(`유효용량 ㎥ ${srcTag('용량부하 ④')}`,`<input class="f-inp" type="number" step="0.1" min="0" value="${TK().effective||''}" placeholder="—" onchange="setTank('effective',+this.value)" aria-label="유효용량">`,'설비 계산용(참고)')}
+        ${fld(`칸 수 ${srcTag('용량부하 ⑤')}`,`<select class="f-inp" onchange="setTank('compart',this.value==='auto'?'auto':+this.value)" aria-label="칸 수">
+            <option value="auto"${TK().compart==='auto'?' selected':''}>자동 — 현재 ${tankCompart()}칸</option>
+            ${[1,2,3,4].map(n=>`<option value="${n}"${TK().compart===n?' selected':''}>${n}칸 지정</option>`).join('')}</select>`)}
+        ${fld(`양정 H m ${srcTag('용량부하 ⑥')}`,`<input class="f-inp" type="number" step="0.1" min="0" value="${P.head||''}" placeholder="—" onchange="setPump('head',this.value?+this.value:0)" aria-label="양정 H">`,'카탈로그 선정용 — 이 앱 계산에는 쓰지 않음')}
+      </div>
+      <div class="vs-grid2">
+        ${fld(`토출압 P<sub>op</sub> kgf/cm² ${srcTag('카탈로그(P_op)')}`,`<div class="inp-unit"><input class="f-inp" type="number" step="0.1" value="${P.pressure}" onchange="setPump('pressure',+this.value)" aria-label="토출압 P_op">${kpaTag(P.pressure)}</div>`,'설계 유량 운전점의 토출압')}
+        ${fld(`최대압 P<sub>max</sub> — 정지양정 kgf/cm² ${srcTag('카탈로그(P_max)')}`,`<div class="inp-unit"><input class="f-inp" type="number" step="0.1" min="0" value="${P.pressureMax||''}" placeholder="—" onchange="setPump('pressureMax',this.value?+this.value:0)" aria-label="최대압 P_max">${kpaTag(P.pressureMax)}</div>`,'유량 0 점 — PRV 존 판정(550 kPa)에만 사용. 미입력이면 토출압으로 예비 판정')}
+      </div>
+      <details class="vs-more"><summary>펌프 유량 산정 주의 ▸</summary><div class="fld-note" style="line-height:1.7">
         <strong>Q(펌프) = Q(WSFU · 일반기구만) + Σ(기구유량 × 동시운전 대수)</strong> — AC-033 33.3.1.3<br>
         · 관경 선정용 회사 유량(동시사용계수 방식)을 그대로 넣지 않습니다. 그 값은 관에서만 검증됐습니다<br>
-        · 연속사용 기구는 <strong>WSFU 집계에서 빼고</strong> 따로 더합니다. 빼지 않으면 두 번 잡힙니다<br>
-        <span style="color:var(--warn)">⚠ 시간평균에 첨두배수를 곱한 값(Qh/60 × 3)은 쓰지 않습니다. 세정밸브 계통에서는 대변기 1대(96 L/min)에도 못 미칩니다</span>
-      </span>
-    </div>
-    <div class="form-row">
-      <span class="form-label">펌프 접속 관경</span>
-      <select onchange="setPump('pumpPipe',this.value)">
-        ${['40A','50A','65A','80A','100A'].map(p=>`<option${p===(P.pumpPipe||'65A')?' selected':''}>${p}</option>`).join('')}
-      </select>
-    </div>`;
+        · 연속사용 기구는 WSFU 집계에서 빼고 따로 더합니다. 빼지 않으면 두 번 잡힙니다<br>
+        · 시간평균에 첨두배수를 곱한 값(Qh/60 × 3)은 쓰지 않습니다</div></details>`;
   } else {
-    h+=`<div class="form-row">
-      <span class="form-label">수조 저수위 높이 (m)</span>
-      <input class="form-inp sm" type="number" step="0.5" value="${B.tankHeight??3}" onchange="setBuilding('tankHeight',+this.value)">
-      <span style="font-size:11px;color:var(--text2)">최상층 지붕(옥상 바닥) 기준 수조 저수위까지 높이</span>
-    </div>
-    <div class="form-row">
-      <span class="form-label">최대 급수량 (L/s)</span>
-      <input class="form-inp sm" type="number" step="0.1" min="0" value="${TK().inflowLps||''}" placeholder="—" onchange="setTank('inflowLps',+this.value)">
-      <span style="font-size:11px;color:var(--text2)">수조로 들어오는 최대 유량 — 오버플로 관경 산정용. 현재 <strong>${esc(overflowSize().txt.split(' — ')[0])}</strong></span>
+    h+=`</div><div class="vs-grid3">
+      ${fld('수조 저수위 높이 m',`<input class="f-inp" type="number" step="0.5" value="${B.tankHeight??3}" onchange="setBuilding('tankHeight',+this.value)" aria-label="수조 저수위 높이">`,'최상층 지붕(옥상 바닥) 기준')}
+      ${fld('최대 급수량 L/s',`<input class="f-inp" type="number" step="0.1" min="0" value="${TK().inflowLps||''}" placeholder="—" onchange="setTank('inflowLps',+this.value)" aria-label="최대 급수량">`,'오버플로 관경 산정용 — '+esc(overflowSize().txt.split(' — ')[0]))}
     </div>`;
   }
-  h+=`<div class="form-row">
-      <span class="form-label">메인관 관경</span>
-      <select onchange="setPump('mainPipe',this.value)">
-        ${PIPES.map(p=>`<option${p===P.mainPipe?' selected':''}>${p}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-row">
-      <span class="form-label">수도 인입관 관경</span>
-      <select onchange="setPump('inletPipe',this.value)">
-        ${['25A','32A','40A','50A','65A','80A'].map(p=>`<option${p===(P.inletPipe||'50A')?' selected':''}>${p}</option>`).join('')}
-      </select>
-    </div>
-  </div>`;
+  h+=`</section>`;
 
-  // ── 인입부 구성 — 기준: IN-001 1.3.7 ──
-  if(S.system==='booster'){
-    const I=IN(), PK=PKG(), dcv=dcvDecision();
-    h+=`<div class="section">
-      <div class="section-title">인입부 구성 — 기준 도면 반영</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
-        FROM CIVIL PIPE → 차단밸브 → 수도계량기 → 스트레이너 → 차단밸브 → 더블체크밸브 → 압력계 → LCV 세트(바이패스 포함) → 저수조
-      </div>
-      <div class="form-row">
-        <span class="form-label">버터플라이 시작 관경</span>
-        <select onchange="setInlet('bfFrom',+this.value)">
-          ${BF_OPTIONS.map(n=>`<option value="${n}"${(+I.bfFrom||65)===n?' selected':''}>${n}A 이상${n===65?' (기본)':''}</option>`).join('')}
-        </select>
-        <span style="font-size:11px;color:var(--text2)">
-          미만은 게이트밸브 · 회사 표준(법정 아님) · 현재 인입 ${P.inletPipe||'50A'} → <strong>${shutoffType(P.inletPipe||'50A')}</strong>${shutoffType(P.inletPipe||'50A')==='버터플라이밸브'?`(${bfOperator(P.inletPipe||'50A')})`:''}
-        </span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">수도계량기</span>
-        <select onchange="setInlet('meter',this.value==='1')">
-          <option value="1"${I.meter?' selected':''}>설치 (건물 내부 별도 계측)</option>
-          <option value="0"${!I.meter?' selected':''}>미설치</option>
-        </select>
-        <span style="font-size:11px;color:var(--text2)">관할 수도사업자 계량기와 별도인지 확인</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">저수조 유입 방식</span>
-        <select onchange="setInlet('tankInlet',this.value)">
-          <option value="airgap"${I.tankInlet!=='submerged'?' selected':''}>자유낙수 (유입구가 O.F 수위보다 위)</option>
-          <option value="submerged"${I.tankInlet==='submerged'?' selected':''}>수몰 유입 (유입구가 물에 잠김)</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <span class="form-label">더블체크밸브</span>
-        <span style="font-size:12px"><strong>필수</strong></span>
-        <span style="font-size:11px;color:var(--text2)">${esc(dcv.why)}</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">인입압 압력계</span>
-        <select onchange="setInlet('pg',this.value==='1')">
-          <option value="1"${I.pg?' selected':''}>설치 (게이지콕 포함)</option>
-          <option value="0"${!I.pg?' selected':''}>미설치</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <span class="form-label">LCV 형식</span>
-        <select onchange="setInlet('lcvType',this.value)">
-          <option value="balltap"${I.lcvType!=='electric'?' selected':''}>정수위 볼탭식 (파일럿·완폐)</option>
-          <option value="electric"${I.lcvType==='electric'?' selected':''}>전동·전자식 (급폐쇄)</option>
-        </select>
-        <span style="font-size:11px;color:var(--text2)">전동·전자식이면 LCV 토출측 수격방지기 추가 (KDS 31 30 15 4.8)</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">LCV 바이패스</span>
-        <select onchange="setInlet('lcvBypass',this.value==='1')">
-          <option value="1"${I.lcvBypass?' selected':''}>설치 (평상시 닫힘)</option>
-          <option value="0"${!I.lcvBypass?' selected':''}>미설치</option>
-        </select>
-        <span style="font-size:11px;color:${SC.prv}">⚠ 열어두면 저수조 과수위·월류</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">저수조 총용량 (㎥)</span>
-        <input class="form-inp sm" type="number" step="1" min="0" value="${TK().volume??20}"
-          onchange="setTank('volume',+this.value)">
-        <span style="font-size:11px;color:var(--text2)">
-          ${TANK_SPLIT_TON}㎥ <strong>초과</strong>면 자동 2칸 — ${LAW} 제${TANK_LAW.split.no}호. <strong>법 판정은 총용량 기준</strong>
-        </span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">최대 급수량 (L/s)</span>
-        <input class="form-inp sm" type="number" step="0.1" min="0" value="${TK().inflowLps||''}"
-          placeholder="—" onchange="setTank('inflowLps',+this.value)">
-        <span style="font-size:11px;color:var(--text2)">저수조로 들어오는 최대 유량(인입·LCV) — 오버플로 관경 산정용. 현재 <strong>${esc(overflowSize().txt.split(' — ')[0])}</strong></span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">유효용량 (㎥)</span>
-        <input class="form-inp sm" type="number" step="0.1" min="0" value="${TK().effective||''}"
-          placeholder="—" onchange="setTank('effective',+this.value)">
-        ${srcTag('용량부하 ①')}
-        <span style="font-size:11px;color:var(--text2)">설비 계산용(참고). 상부 여유고·하부 사수 제외분 — 수위 계획은 AC-032 영역</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">소화용수 겸용</span>
-        <select onchange="setTank('fireCombined',this.value==='1')">
-          <option value="0"${!TK().fireCombined?' selected':''}>분리 (생활용수 전용)</option>
-          <option value="1"${TK().fireCombined?' selected':''}>겸용 (생활+소화 같은 저수조)</option>
-        </select>
-        <span style="font-size:11px;color:var(--text2)">겸용이면 ${LAW} 제${TANK_LAW.fireBF.no}호 역류방지장치 필수</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">저수조 칸 수</span>
-        <select onchange="setTank('compart',this.value==='auto'?'auto':+this.value)">
-          <option value="auto"${TK().compart==='auto'?' selected':''}>자동 (용량 기준) — 현재 ${tankCompart()}칸</option>
-          ${[1,2,3,4].map(n=>`<option value="${n}"${TK().compart===n?' selected':''}>${n}칸 지정</option>`).join('')}
-        </select>
-        ${srcTag('용량부하 ②')}
-        <span style="font-size:11px;color:var(--text2)">구획하면 LCV 세트 이후 인입관이 칸 수만큼 갈라집니다</span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">PRV 바이패스</span>
-        <select onchange="setInlet('prvBypass',this.value==='1')">
-          <option value="0"${!IN().prvBypass?' selected':''}>제외 (기본) — 정비 시 병렬 2열 권장</option>
-          <option value="1"${IN().prvBypass?' selected':''}>설치 (평상시 닫힘·잠금)</option>
-        </select>
-        <span style="font-size:11px;color:${IN().prvBypass?'var(--warn)':'var(--text2)'}">
-          ${IN().prvBypass?'⚠ 열면 감압되지 않은 상류압이 하류로 갑니다':'감압밸브 우회는 기본 제외 (IN-001 1.3.10.3)'}
-        </span>
-      </div>
-      <div class="form-row">
-        <span class="form-label">비상 바이패스</span>
-        <select onchange="setInlet('emerBypass',this.value==='1')">
-          <option value="1"${I.emerBypass?' selected':''}>설치 (시수직결, 평상시 닫힘)</option>
-          <option value="0"${!I.emerBypass?' selected':''}>미설치</option>
-        </select>
-        <span style="font-size:11px;color:var(--text2)">시수 인입관 → 토출 주관 직결 · 차단밸브 2개 (평상시 닫힘)</span>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-title">펌프 패키지(스키드) 포함 품목</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
-        제작사 스키드에 포함된 품목을 체크하면 외부 수량에서 빠집니다 (중복 산출 방지).
-        스키드 구성이 기준 도면과 다르면 임의로 지우지 말고 차이를 발주처에 확인하세요.
-      </div>
-      <div class="form-row" style="gap:16px;flex-wrap:wrap">
-        ${[['fj','플렉시블조인트'],['cv','체크밸브'],['gv','차단밸브'],['pg','압력계']].map(([k,lbl])=>
-          `<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
-            <input type="checkbox"${PK[k]?' checked':''} onchange="setPkg('${k}',this.checked)"> ${lbl}
-          </label>`).join('')}
-      </div>
-    </div>`;
+  // ── 3 입상관 · 감압 존 ──
+  const needG=S.groups.filter(zoneNeeds);
+  h+=`<section class="vs-sec" id="sec3"><div class="vs-hrow"><h2 class="vs-h">3. 입상관 · 감압 존</h2>
+    <span class="vs-hr">${S.groups.length&&!needG.length?`<span class="ok-txt">모든 층 ${MAX_FIXTURE_KPA} kPa 미만 ✓</span>`:''}
+    <button class="btn btn-ghost btn-sm" onclick="addGroup()">+ 입상관 추가</button></span></div>`;
+  if(!S.groups.length) h+=`<div class="fld-note">입상관이 없습니다 — 「+ 입상관 추가」</div>`;
+  for(const g of needG){
+    const z=groupZoneCheck(g), list=z.uncovered.length?z.uncovered:z.over;
+    const f=list.length?(list.length>1?`${Math.min(...list)}~${Math.max(...list)}층`:`${list[0]}층`):`${z.lo}층`;
+    h+=`<div class="viol-band"><span><strong>${esc(g.name)} · ${f} 유량 0 최대압 ${MAX_FIXTURE_KPA} kPa 이상</strong> — 감압 존이 필요합니다 (KDS 31 30 15 4.7)${z.prelim?' · 예비(P<sub>max</sub> 미입력)':''}</span>
+      ${g.zonePlan?'':`<button class="btn btn-viol" onclick="splitZoneA('${g.id}')">저층 존 나누기 ▸</button>`}</div>`;
   }
-
-  // Building
-  h+=`<div class="section">
-    <div class="section-title">건물 정보</div>
-    <div class="form-row">
-      <span class="form-label">총 층수</span>
-      <input class="form-inp sm" type="number" value="${B.floors}" onchange="setBuilding('floors',+this.value)">
-    </div>
-    <div class="form-row">
-      <span class="form-label">층고 (m)</span>
-      <input class="form-inp sm" type="number" step="0.1" value="${B.floorHeight}" onchange="setBuilding('floorHeight',+this.value)">
-    </div>
-    <div class="form-row">
-      <span class="form-label">설계 목표압력 (kgf/cm²)</span>
-      <input class="form-inp sm" type="number" step="0.1" value="${B.targetPressure}" onchange="setBuilding('targetPressure',+this.value)">
-      ${kpaTag(B.targetPressure)}
-      <span style="font-size:11px;color:var(--text2)">참고값 — 감압 판정에 쓰지 않음. 감압은 유량 0 최대압 550 kPa 이상 (KDS 31 30 15 4.7)</span>
-    </div>
-    <div class="form-row">
-      <span class="form-label">감압밸브 설정압 (kgf/cm²)</span>
-      <input class="form-inp sm" type="number" step="0.1" value="${B.prvPressure}" onchange="setBuilding('prvPressure',+this.value)">
-      ${kpaTag(B.prvPressure)}
-    </div>
-    <div class="form-row">
-      <span class="form-label">메인 신축이음 확정 수량</span>
-      <input class="form-inp sm" type="number" min="0" step="1" value="${B.exConfirmed||0}" onchange="setBuilding('exConfirmed',+this.value)">
-      <span style="font-size:11px;color:var(--text2)">후보 ${Math.floor(Math.max(0,(B.floors-1)*(B.floorHeight||3.5))/30)}개 — 검토 후 확정 수량만 입력</span>
-    </div>
-  </div>`;
-
-  // Material preset
-  const rating=(S.system==='booster'&&S.pump.pressure>=10)?'16K':'10K';
-  h+=`<div class="section">
-    <div class="section-title">밸브 재질 사양</div>
-    <div class="form-row">
-      <span class="form-label">재질 프리셋</span>
-      <select onchange="setMaterial(this.value)" style="max-width:100%">
-        <option value="sts"${(S.material||'sts')==='sts'?' selected':''}>STS 표준 — 소구경 STS304 나사식 / 대구경 덕타일주철+STS디스크 (권장)</option>
-        <option value="allsts"${S.material==='allsts'?' selected':''}>전체 STS — 전 구경 STS304 (고급 사양)</option>
-        <option value="general"${S.material==='general'?' selected':''}>일반 — 소구경 청동 / 대구경 주철</option>
-      </select>
-    </div>
-    <div style="font-size:11px;color:var(--text2)">
-      ※ 밸브 목록의 재질/등급 컬럼에 자동 반영됩니다. 소구경(50A 이하) 나사·프레스식, 대구경(65A 이상) 플랜지·그루브드식 기준.<br>
-      ※ 압력등급 현재 <strong style="color:var(--accent)">${rating}</strong> — 펌프 토출압 10kgf/cm² 이상이면 16K 자동 적용.
-    </div>
-  </div>`;
-
-  // Floor pressure table
-  const p1=floorPressure(1);
-  if(B.prvPressure>0&&p1/B.prvPressure>3){
-    h+=`<div class="warn-banner">⚠️ 감압비 ${(p1/B.prvPressure).toFixed(1)} : 1 — 3:1 초과 시 PRV 소음·캐비테이션 우려, 2단 감압(직렬 PRV) 검토가 필요합니다.</div>`;
-  }
-  if(B.prvPressure>B.targetPressure){
-    h+=`<div class="warn-banner">⚠️ 감압밸브 설정압(${B.prvPressure})이 설계 목표압력(참고 ${B.targetPressure})보다 높습니다. 설정압을 확인하세요.</div>`;
-  }
-  h+=`<div class="section">
-    <div class="section-title">층별 압력 계산 ${S.system==='gravity'?'(고가수조 정수두 기준)':'(펌프 토출압 기준)'}</div>
-    <table class="floor-table"><thead><tr>
-      <th>층</th><th>압력 (kgf/cm²)</th><th>상태</th>
-    </tr></thead><tbody>`;
-  for(let f=1;f<=B.floors;f++){
-    const p=floorPressure(f), over=overMax(floorPmax(f).p*KGF2KPA), fr=floorReqKPa(f), low=p*KGF2KPA<fr;
-    h+=`<tr${over?' class="floor-warn"':low?' class="floor-low"':''}>
-      <td>${f}층</td><td>${p.toFixed(2)} <span style="color:var(--text2)">(${(p*KGF2KPA).toFixed(0)} kPa)</span></td>
-      <td>${!supplySet()?'<span class="warn-chip">입력 필요</span>':over?`<span class="warn-chip">감압필요 ▶ PRV</span>`:low?`<span class="bad-chip">압력부족 (${fr} kPa 미만)</span>`:`<span class="ok-chip">적정</span>`}</td>
-    </tr>`;
-  }
-  h+=`</tbody></table>
-    <div style="font-size:11px;color:var(--text2);margin-top:8px">
-      ※ 압력은 운전 토출압 기준 정수두 값이며 배관 마찰손실은 별도입니다. 「감압필요」는 유량 0 최대압(P<sub>max</sub>, 미입력이면 토출압) 550 kPa 이상일 때 (KDS 31 30 15 4.7). 필요압은 그 층을 담당하는 입상관의 말단 기구 기준(샤워 혼합밸브 130 · 세정밸브 100 · 샤워 70 · 일반 55 kPa, 담당 없음 55).
-      ${S.system==='gravity'?'<br>※ 고가수조식은 최상층부 압력 부족 시 최상층 전용 가압펌프(부스터) 설치를 검토하세요.':''}
-    </div></div>`;
-
-  // Groups
-  h+=`<div class="section">
-    <div class="fr mb">
-      <span class="section-title" style="margin:0">입상관 / Zone 설정</span>
-      <button class="btn btn-primary btn-sm ml" onclick="addGroup()">+ 입상관 추가</button>
-    </div>`;
-  if(!S.groups.length) h+=`<div style="color:var(--text2);font-size:13px;padding:12px 0">입상관을 추가하세요.</div>`;
   for(const g of S.groups){
-    const fps=g.floorPipes||[];
-    const floorBVs=fps.reduce((s,fp)=>s+(+fp.qty||0),0);
-    const pMax=groupMaxPressure(g);
-    let prvChip='';
-    if(pMax!=null){
-      // 감압 권장 = 담당 최저층 유량 0 최대압 ≥ 550 kPa (존 판정과 같은 기준)
-      const gr=groupRange(g), rec=overMax(floorPmax(gr.lo).p*KGF2KPA);
-      if(rec&&!g.prv) prvChip=`<span class="warn-chip">최대 ${pMax.toFixed(2)}kgf – PRV 권장</span>`;
-      else if(!rec&&g.prv) prvChip=`<span class="warn-chip">최대 ${pMax.toFixed(2)}kgf – PRV 불필요 검토</span>`;
-      else prvChip=`<span class="ok-chip">최대 ${pMax.toFixed(2)}kgf/cm²</span>`;
+    const r=groupRange(g), fps=g.floorPipes||[], z=groupZoneCheck(g);
+    const pmx=r?floorPmax(r.lo).p*KGF2KPA:null;
+    const fpTxt=g.floorSame?`층 주관 모든 층 같음 (${g.floorPipe||'40A'})`:`층 주관 ${fps.reduce((s,x)=>s+(+x.qty||0),0)}개 (층별 입력)`;
+    const prvTxt=g.prv?`PRV 세트 1조 · 2차 설정 <strong>${B.prvPressure} kgf/cm² (${Math.round(B.prvPressure*KGF2KPA)} kPa)</strong>`
+      :fps.some(x=>x.prv)?`층 분기 PRV ${fps.filter(x=>x.prv).map(x=>x.floorNo).join('·')}층 (B안)`
+      :pmx!=null?`감압 없음 · 유량 0 최대압 ${pmx.toFixed(0)} kPa`:'';
+    const role=g.zoneRole==='low'?' · 기계실 헤더에서 분리 (A안)':'';
+    h+=`<div class="zone-card${z&&z.msg?' bad':''}">
+      <div class="zone-line"><span><strong>${esc(g.name)}</strong> <span class="muted">${r?`${r.lo}~${r.hi}층`:'담당층 미지정'}${g.allFloors?' 전 층':''} · ${g.pipe} · ${fpTxt}${role}</span></span>
+        <span class="muted sm">${prvTxt}</span></div>`;
+    const canShift=(g.zonePlan==='A'&&g.zoneRole==='high')||g.zonePlan==='B';
+    if(canShift){
+      h+=`<div class="zone-btns">${g.zonePlan==='A'?`<button class="btn btn-ghost btn-sm" onclick="zoneToB('${g.id}')">B안(층 분기 PRV)으로 바꾸기</button>`
+          :`<button class="btn btn-ghost btn-sm" onclick="zoneToA('${g.id}')">A안(기계실 헤더 분리)으로 바꾸기</button>`}
+        <span class="muted sm">존 경계층(저층 존 맨 위)</span>
+        <button class="btn btn-ghost btn-sm" aria-label="경계층 내리기" onclick="zoneShift('${g.id}',-1)">▼</button>
+        <strong class="sm">${g.zonePlan==='B'?g.zoneB:(+g.fromFloor-1)}층</strong>
+        <button class="btn btn-ghost btn-sm" aria-label="경계층 올리기" onclick="zoneShift('${g.id}',1)">▲</button></div>`;
     }
-    // PRV 존 판정 (명세 7.5) — 550 kPa, 유량 0 최대압
-    const zc=groupZoneCheck(g);
-    let zoneBox='';
-    if(zc&&zc.need){
-      const pre=zc.prelim?' <span style="color:var(--text2)">(예비 — P<sub>max</sub> 미입력)</span>':'';
-      zoneBox=zc.msg
-        ?`<div class="warn-banner" style="margin:6px 0 0">⚠️ 존 판정: ${zc.lo}층 유량 0 최대압 ${zc.loKPa.toFixed(0)} kPa ≥ ${MAX_FIXTURE_KPA} kPa${pre}<br>${esc(zc.msg)}</div>`
-        :`<div style="font-size:11px;color:var(--accent2);margin-top:6px">✓ 존 판정: ${zc.lo}층 유량 0 최대압 ${zc.loKPa.toFixed(0)} kPa ≥ ${MAX_FIXTURE_KPA} kPa → 담당층 모두 감압됨${zc.floorPrv.length?` (B안 층 분기 PRV ${zc.floorPrv.join('·')}층)`:''}${pre}</div>`;
-    }
-    h+=`<div class="group-card">
-      <div class="group-hdr">
-        <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="입상관명">
-        <select onchange="setGroupVal('${g.id}','pipe',this.value)">
-          ${PIPES.map(p=>`<option${p===g.pipe?' selected':''}>${p}</option>`).join('')}
-        </select>
-        <span style="font-size:11px;color:var(--text2)">담당층</span>
-        <input class="zone-inp" type="number" min="1" style="width:46px" value="${g.fromFloor||''}" placeholder="—" onchange="setGroupVal('${g.id}','fromFloor',this.value?+this.value:null)">
-        <span style="font-size:11px;color:var(--text2)">~</span>
-        <input class="zone-inp" type="number" min="1" style="width:46px" value="${g.toFloor||''}" placeholder="—" onchange="setGroupVal('${g.id}','toFloor',this.value?+this.value:null)">
-        <label class="prv-check">
-          <input type="checkbox" ${g.prv?'checked':''} onchange="setGroupVal('${g.id}','prv',this.checked)">
-          <span style="color:var(--warn)">감압밸브(PRV)</span>
-        </label>
-        ${prvChip}
-        <button class="btn btn-danger btn-sm ml" onclick="delGroup('${g.id}')">삭제</button>
-      </div>
-      ${zoneBox}
-      <div class="zone-list">
-        <div class="fr" style="gap:6px;margin-bottom:6px">
-          <span style="font-size:11px;color:var(--text2);font-weight:600">층별 주관</span>
-          <button class="btn btn-ghost btn-sm" onclick="addFloorPipe('${g.id}')">+ 층 추가</button>
-          ${floorBVs?`<span style="font-size:10px;color:#bc8cff;margin-left:4px">BV ${floorBVs}개</span>`:''}
-        </div>
-        ${fps.map((fp,fi)=>`<div class="zone-row">
-          <input class="zone-inp" type="number" min="1" value="${fp.floorNo||fi+1}" placeholder="층" onchange="setFloorPipeProp('${g.id}',${fi},'floorNo',+this.value)" style="width:52px">층
-          <select onchange="setFloorPipeProp('${g.id}',${fi},'pipe',this.value)">
-            ${PIPES.map(p=>`<option${p===fp.pipe?' selected':''}>${p}</option>`).join('')}
-          </select>
-          <span style="font-size:11px;color:var(--text2)">수량</span>
-          <input class="zone-inp" type="number" min="1" value="${fp.qty||1}" onchange="setFloorPipeProp('${g.id}',${fi},'qty',+this.value)" style="width:46px">
-          <label class="prv-check" title="B안 — 루트상 상층 입상관(P/S)에 붙을 수밖에 없는 저층 기구군의 층 분기 PRV 세트 (명세 7.5)">
-            <input type="checkbox" ${fp.prv?'checked':''} onchange="setFloorPipeProp('${g.id}',${fi},'prv',this.checked)">
-            <span style="color:var(--warn)">층 분기 PRV</span>
-          </label>
-          ${fp.prv?`<span style="font-size:11px;color:var(--text2)">2차압</span>
-          <input class="zone-inp" type="number" step="0.1" min="0.5" max="10" style="width:52px" value="${fp.prvSet||''}" placeholder="${B.prvPressure}" onchange="setFloorPipeProp('${g.id}',${fi},'prvSet',this.value?+this.value:null)">
-          <span style="font-size:10px;color:var(--text2)">kgf/cm² · 유량 0 ${(floorPrvSet(fp)*KGF2KPA).toFixed(0)} kPa ${overMax(floorPrvSet(fp)*KGF2KPA)?'<b style="color:var(--warn)">≥ 550</b>':'&lt; 550'} · 설계 목표압력 ${B.targetPressure} 참고 (⚠ 기준 미결정) · 점검구 필수</span>`:''}
-          <button class="btn btn-danger btn-sm" onclick="delFloorPipe('${g.id}',${fi})">✕</button>
-        </div>`).join('')}
-        ${!fps.length?`<span style="font-size:11px;color:var(--text2)">층별 주관 없음</span>`:''}
-      </div>
-      <div class="zone-list" style="margin-top:6px">
-        <div class="fr" style="gap:6px;margin-bottom:6px">
-          <span style="font-size:11px;color:var(--text2);font-weight:600">화장실(Zone)</span>
-          <button class="btn btn-ghost btn-sm" onclick="addZone('${g.id}')">+ 화장실 추가</button>
-          ${g.zones.length?`<span style="font-size:10px;color:#bc8cff;margin-left:4px">BV ${g.zones.length}개</span>`:''}
-        </div>
-        ${g.zones.map((z,zi)=>`<div class="zone-row">
-          <input class="zone-inp" value="${esc(z.name)}" placeholder="화장실명" onchange="setZoneProp('${g.id}',${zi},'name',this.value)">
-          <select onchange="setZoneProp('${g.id}',${zi},'pipe',this.value)">
-            ${PIPES.map(p=>`<option${p===z.pipe?' selected':''}>${p}</option>`).join('')}
-          </select>
-          <button class="btn btn-danger btn-sm" onclick="delZone('${g.id}',${zi})">✕</button>
-        </div>`).join('')}
-        ${!g.zones.length?`<span style="font-size:11px;color:var(--text2)">화장실 없음</span>`:''}
-      </div>
-    </div>`;
+    h+=`<details class="vs-more"><summary>입상관 상세 ▸</summary>${groupEditor(g)}</details></div>`;
   }
+  h+=`<details class="vs-more" data-autoopen="1"><summary>층별 압력표 ▸</summary>${floorTableHTML()}</details>`;
+  h+=`<details class="vs-more" data-autoopen="1"><summary>마찰손실 검토 (말단 잔압) ▸</summary>${frictionHTML()}</details>`;
+  h+=`</section>`;
+
+  // ── 4 인입부 · 밸브 세트 — 회사 표준 ──
+  const rating=(isBst&&S.pump.pressure>=10)?'16K':'10K';
+  const sumTxt=isBst
+    ?`수도직결 · 계량기 ${I.meter?'있음':'없음'} · 역류방지밸브(DCV) · ${I.lcvType==='electric'?'전동·전자식':'볼탭식'} LCV · 압력등급 자동(${rating}) · 흡입측 연성계`
+    :`고가수조 인입 · 압력등급 자동(${rating}) · 계량기 후단 DCV 는 인입부 별도 확인`;
+  h+=`<section class="vs-sec" id="sec4"><details class="vs-std" data-autoopen="1"><summary>
+      <span><strong>4. 인입부 · 밸브 세트 — 회사 표준</strong>${chg.length?` <span class="chg-badge">바꾼 값 ${chg.length}개</span>`:''}<br><span class="vs-sub">${sumTxt}</span></span>
+      <span class="btn btn-ghost btn-sm sum-btn">상세 ▸</span></summary>
+      <div class="fld-note" style="margin:10px 0">흐린 칸 = 회사 표준 그대로 · 진한 칸 = 바꾼 값</div>
+      <div class="vs-grid4">
+        ${fld('메인관 관경',sel('mainPipe',PIPES.map(p=>[p,p]),P.mainPipe,"setPump('mainPipe',this.value)"))}
+        ${fld('수도 인입관 관경',sel('inletPipe',['25A','32A','40A','50A','65A','80A'].map(p=>[p,p]),P.inletPipe||'50A',"setPump('inletPipe',this.value)"))}
+        ${isBst?fld('펌프 접속 관경',sel('pumpPipe',['40A','50A','65A','80A','100A'].map(p=>[p,p]),P.pumpPipe||'65A',"setPump('pumpPipe',this.value)")):''}
+        ${fld('재질',sel('material',[['sts','STS 표준'],['allsts','전체 STS'],['general','일반(청동·주철)']],S.material||'sts',"setMaterial(this.value)"),`압력등급 자동 ${rating}`)}
+        ${isBst?fld('버터플라이 시작',sel('in.bfFrom',BF_OPTIONS.map(n=>[n,`${n}A 이상`]),+I.bfFrom||65,"setInlet('bfFrom',+this.value)"),`인입 → ${shutoffType(P.inletPipe||'50A')}`):''}
+        ${isBst?fld('수도계량기',sel('in.meter',[['true','있음'],['false','없음']],!!I.meter,"setInlet('meter',this.value==='true')")):''}
+        ${isBst?fld('역류방지밸브',`<span class="f-fixed">DCV (필수 · 고시 별표5)</span>`):''}
+        ${isBst?fld('저수조 유입',sel('in.tankInlet',[['airgap','자유낙수'],['submerged','수몰 유입']],I.tankInlet==='submerged'?'submerged':'airgap',"setInlet('tankInlet',this.value)")):''}
+        ${isBst?fld('인입압 압력계',sel('in.pg',[['true','있음'],['false','없음']],!!I.pg,"setInlet('pg',this.value==='true')")):''}
+        ${isBst?fld('LCV 형식',sel('in.lcvType',[['balltap','정수위 볼탭식'],['electric','전동·전자식']],I.lcvType==='electric'?'electric':'balltap',"setInlet('lcvType',this.value)"),I.lcvType==='electric'?'LCV 수격방지기 추가':''):''}
+        ${isBst?fld('LCV 바이패스',sel('in.lcvBypass',[['true','있음 (NC)'],['false','없음']],!!I.lcvBypass,"setInlet('lcvBypass',this.value==='true')")):''}
+        ${isBst?fld('최대 급수량 L/s',`<input class="f-inp${isStd('tk.inflowLps')?' std':''}" type="number" step="0.1" min="0" value="${TK().inflowLps||''}" placeholder="비우면 인입 +1단계" onchange="setTank('inflowLps',+this.value)" aria-label="최대 급수량">`,esc(overflowSize().txt.split(' — ')[0])):''}
+        ${isBst?fld('소화용수 겸용',sel('tk.fireCombined',[['false','분리'],['true','겸용']],!!TK().fireCombined,"setTank('fireCombined',this.value==='true')")):''}
+        ${fld('PRV 바이패스',sel('in.prvBypass',[['false','없음 (병렬 2열 권장)'],['true','있음 (NC·잠금)']],!!IN().prvBypass,"setInlet('prvBypass',this.value==='true')"))}
+        ${isBst?fld('비상 바이패스',sel('in.emerBypass',[['true','있음 (NC)'],['false','없음']],!!I.emerBypass,"setInlet('emerBypass',this.value==='true')")):''}
+        ${fld('감압밸브 설정압 kgf/cm²',`<div class="inp-unit"><input class="f-inp${isStd('prvPressure')?' std':''}" type="number" step="0.1" value="${B.prvPressure}" onchange="setBuilding('prvPressure',+this.value)" aria-label="감압밸브 설정압">${kpaTag(B.prvPressure)}</div>`)}
+        ${fld('설계 목표압력 kgf/cm²',`<div class="inp-unit"><input class="f-inp${isStd('targetPressure')?' std':''}" type="number" step="0.1" value="${B.targetPressure}" onchange="setBuilding('targetPressure',+this.value)" aria-label="설계 목표압력">${kpaTag(B.targetPressure)}</div>`,'참고값 — 판정에 쓰지 않음')}
+        ${fld('메인 신축이음 확정',`<input class="f-inp${isStd('exConfirmed')?' std':''}" type="number" min="0" step="1" value="${B.exConfirmed||0}" onchange="setBuilding('exConfirmed',+this.value)" aria-label="메인 신축이음 확정 수량">`,`후보 ${Math.floor(Math.max(0,(B.floors-1)*(B.floorHeight||3.5))/30)}개`)}
+      </div>
+      ${isBst?`<div class="fld" style="margin-top:12px"><span class="lbl">펌프 패키지(스키드) 포함 품목 — 체크하면 외부 수량에서 뺌</span><div class="chk-row">
+        ${[['fj','플렉시블조인트'],['cv','체크밸브'],['gv','차단밸브'],['pg','압력계·연성계']].map(([k,lbl])=>`<label class="${isStd('pk.'+k)?'std':''}"><input type="checkbox"${PKG()[k]?' checked':''} onchange="setPkg('${k}',this.checked)"> ${lbl}</label>`).join('')}
+      </div></div>`:''}
+      <div class="fld-note std-box">세트 구성(${isBst?'게이트 → 계량기 → 스트레이너 → 게이트 → DCV → 압력계 → LCV 세트 → 저수조':'인입 게이트 → 체크 → 고가수조'})은 회사 표준으로 고정</div>
+      <details class="vs-more"><summary>기계실 물량 입력 (개산) ▸</summary>${mrHTML()}</details>
+    </details></section>`;
   h+=`</div>`;
 
-  // 마찰손실 검토
-  h+=`<div class="section"><div class="section-title">마찰손실 검토 (Hazen-Williams · STS304 C=140 · 실제 안지름 · <b>예비</b>)</div>`;
-  if(S.system==='booster'){
-    h+=`<div class="form-row">
-      <span class="form-label">기계실 배관 길이 (m)</span>
-      <input class="form-inp sm" type="number" step="1" value="${P.mrLen??8}" onchange="setPump('mrLen',+this.value)">
-      <span style="font-size:11px;color:var(--text2)">펌프 토출 ~ 입상관 분기까지 배관 길이 합계</span>
-    </div>`;
-  }
-  if(!S.groups.length){
-    h+=`<div style="color:var(--text2);font-size:12px;padding:6px 0">입상관을 추가하고 유량을 입력하면 검토표가 나타납니다.</div></div>`;
-  } else {
-    h+=`<table class="floor-table"><thead><tr>
-      <th>입상관</th><th>유량 (L/min)</th><th>수평길이 (m)</th><th>말단 필요압</th><th>주요장치 손실 (kPa, 제조사)</th><th>수직 (자동)</th><th>부속 예비 (×1.4)</th><th>마찰손실 (kgf/cm²)</th><th>말단 예상압</th><th>판정</th>
-    </tr></thead><tbody>`;
-    for(const g of S.groups){
-      const r=groupFriction(g);
-      h+=`<tr>
-        <td style="font-weight:600">${esc(g.name)}${g.prv?' <span style="color:var(--warn);font-size:10px">PRV</span>':''}</td>
-        <td><input class="zone-inp" type="number" min="0" style="width:72px" value="${g.flowLpm||''}" placeholder="—" onchange="setGroupVal('${g.id}','flowLpm',this.value?+this.value:null)"></td>
-        <td><input class="zone-inp" type="number" min="0" style="width:60px" value="${g.horizLen||''}" placeholder="0" onchange="setGroupVal('${g.id}','horizLen',this.value?+this.value:null)"></td>
-        <td><select class="zone-inp" onchange="setGroupVal('${g.id}','reqKPa',+this.value)">${REQ_OPTS.map(([v,l])=>`<option value="${v}"${groupReqKPa(g)===v?' selected':''}>${l}</option>`).join('')}</select></td>
-        <td><input class="zone-inp" type="number" min="0" style="width:60px" value="${g.devLossKPa||''}" placeholder="0" onchange="setGroupVal('${g.id}','devLossKPa',this.value?+this.value:null)"></td>`;
-      if(r){
-        h+=`<td>${r.Lv.toFixed(1)}m</td>
-          <td>${r.Lfit.toFixed(1)}m</td>
-          <td>${(r.hf+r.hfMr).toFixed(2)}</td>
-          <td style="font-weight:700">${r.endKPa.toFixed(0)} kPa <span style="font-weight:400;color:var(--text2)">(${r.endP.toFixed(2)} kgf/cm²)</span></td>
-          <td>${r.ok===null?'<span class="warn-chip">입력 필요</span>':r.ok?`<span class="ok-chip">적정 ≥${r.req}</span>`:`<span class="bad-chip">압력부족 &lt;${r.req} kPa</span>`}${(S.system==='booster'&&+S.pump.flow>0&&+g.flowLpm>+S.pump.flow)?`<div class="warn-chip" style="margin-top:4px" title="관경 앱 유량(회사 동시사용계수)과 펌프 유량(WSFU)은 산정 방법이 다르다">⚠ 펌프 유량 ${S.pump.flow} L/min 초과 — 관경 앱 유량은 관경 선정용</div>`:''}</td>`;
-      } else {
-        h+=`<td colspan="5" style="color:var(--text2)">← 유량 입력 시 자동 계산</td>`;
-      }
-      h+=`</tr>`;
-    }
-    h+=`</tbody></table>
-    <div style="font-size:11px;color:var(--text2);margin-top:8px">
-      ※ 수평길이 = 입상관 분기에서 <strong>최상층의 가장 먼 화장실</strong>까지 수평 구간 합계(최불리 경로). 입상관마다 각자의 최원 경로를 입력하세요.<br>
-      ※ 수직길이는 (담당 최고층 − 1)×층고 개략(최종은 펌프 토출구/PRV 2차측 → 기구 접속점 실제 높이 차). 부속·밸브 손실은 경로 미확정 <b>예비</b>로 직관장 ×1.4 (밸브 L/D 별도 가산 안 함). 주요 장치 손실은 제조사 값을 kPa 로 입력. 경로 확정 후 실제 손실로 교체하고 1.4 를 중복 적용하지 않습니다.<br>
-      ※ 말단 예상압 = 시작압 − 최고층 정수두 − 마찰손실. PRV 입상관은 2차 설정압(분기부 설치 가정) 기준${S.system==='booster'?', 비PRV 입상관은 펌프 토출압 기준(기계실 구간 손실 포함)':''}. 판정은 입상관별 말단 필요압(kPa, 세정밸브 100·샤워 70·일반 55)과 비교합니다. ${supplySet()?'':'<b>공급압(펌프 토출압)이 프로젝트 값으로 입력되지 않아 판정은 「입력 필요」로 표시합니다. 7 kgf/cm² 는 예제값입니다.</b>'}
-    </div></div>`;
-  }
-
-  // 기계실 물량 (개산) — 구간별 입력, 대수·개소는 자동 곱
-  const M=S.mr||{};
-  const nPrv=S.groups.filter(g=>g.prv).length;
-  h+=`<div class="section"><div class="section-title">기계실 물량 입력 (개산) — TP: 감압밸브 세트 출구까지</div>
-    <div class="form-row">
-      <span class="form-label">수도 인입관 직관 (m)</span>
-      <input class="form-inp sm" type="number" min="0" value="${M.inletLen??10}" onchange="setMR('inletLen',this.value)">
-      <span style="font-size:11px;color:var(--text2)">계량기~저수조 직관 (바이패스는 아래 별도)</span>
-    </div>`;
-  if(S.system==='booster'){
-    h+=`<div class="form-row">
-      <span class="form-label">LCV 바이패스 (m)</span>
-      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.lcvBypLen??3}" onchange="setMR('lcvBypLen',this.value)">
-      <span style="font-size:11px;color:var(--text2)">인입 관경으로 산출에 포함</span>
+  // ── 오른쪽: 밸브 수량 요약 · 확인 목록 ──
+  const {summary}=calcValves();
+  const sumRows=[['더블체크밸브(DCV)','더블체크밸브'],['감압밸브(PRV)','감압밸브'],['압력계','압력계'],['연성계(흡입)','연성계'],
+    ['수격방지기','수격방지기'],['체크밸브','체크밸브'],['차단밸브(게이트·BF)',null],['볼밸브','볼밸브']];
+  const chk=allChecks(), cnt={v:0,c:0,n:0}; chk.forEach(x=>cnt[x.lv]++);
+  const LV={v:'위반',c:'확인',n:'참고'};
+  h+=`<aside class="vs-side" aria-label="결과와 확인">
+    <div class="side-card"><strong class="side-h">밸브 수량 요약</strong>
+      <table class="side-tbl"><tbody>${sumRows.map(([l,k])=>`<tr><td>${l}</td><td>${k?summary[k]||0:(summary['게이트밸브']||0)+(summary['버터플라이밸브']||0)}</td></tr>`).join('')}</tbody></table>
+      <div class="side-btns"><button class="btn btn-ghost" onclick="switchTab(3)">전체 표 ▸</button><button class="btn btn-ghost" onclick="switchTab(2)">계통도 보기 ▸</button></div>
     </div>
-    <div class="form-row">
-      <span class="form-label">펌프 흡입 배관 — 1대당 (m)</span>
-      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.suctionLen??4}" onchange="setMR('suctionLen',this.value)">
-      <span style="font-size:11px;color:var(--accent)">× ${pumpSets()}${P.set&&P.count===2?'조':'대'} = ${(((+M.suctionLen)||0)*pumpSets()).toFixed(1)}m 자동</span>
-      <span style="font-size:11px;color:var(--text2)">흡입 헤더 분기~펌프 노즐까지</span>
+    <div class="side-card" id="checkList"><strong class="side-h">확인 목록 <span class="muted sm">위반 ${cnt.v} · 확인 ${cnt.c} · 참고 ${cnt.n}</span></strong>
+      ${chk.map(x=>`<a href="#${x.to}" class="chk chk-${x.lv}" onclick="event.preventDefault();gotoSec('${x.to}')"><span class="chk-lv">${LV[x.lv]}</span><span>${esc(x.msg)}</span></a>`).join('')||'<span class="muted sm">없음</span>'}
     </div>
-    <div class="form-row">
-      <span class="form-label">펌프 토출 배관 — 1대당 (m)</span>
-      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.dischargeLen??2}" onchange="setMR('dischargeLen',this.value)">
-      <span style="font-size:11px;color:var(--accent)">× ${pumpSets()}${P.set&&P.count===2?'조':'대'} = ${(((+M.dischargeLen)||0)*pumpSets()).toFixed(1)}m 자동</span>
-      <span style="font-size:11px;color:var(--text2)">펌프 노즐~합류점(티)까지만 — 합관 이후는 아래 헤더·메인에서 1회 계산</span>
-    </div>
-    <div class="form-row">
-      <span class="form-label">비상 바이패스 (m)</span>
-      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.emerBypLen??6}" onchange="setMR('emerBypLen',this.value)">
-      <span style="font-size:11px;color:var(--text2)">시수직결 우회 배관 (인입 관경)</span>
-    </div>`;
-  }
-  h+=`<div class="form-row">
-      <span class="form-label">${S.system==='booster'?'토출 헤더·메인 (m)':'수조 출구·메인 (m)'}</span>
-      <span style="font-size:13px;font-weight:600">${P.mrLen??8} m</span>
-      <span style="font-size:11px;color:var(--text2)">위 '마찰손실 검토'의 기계실 배관 길이와 공용</span>
-    </div>`;
-  if(nPrv){
-    h+=`<div class="form-row">
-      <span class="form-label">PRV 세트당 배관 (m)</span>
-      <input class="form-inp sm" type="number" min="0" step="0.5" value="${M.prvSetLen??2}" onchange="setMR('prvSetLen',this.value)">
-      <span style="font-size:11px;color:var(--accent)">× PRV ${nPrv}개소 자동</span>
-    </div>`;
-  }
-  h+=`<div class="form-row">
-      <span class="form-label">엘보 개산 계수 (개/m)</span>
-      <input class="form-inp sm" type="number" step="0.05" min="0" value="${M.elbowK??0.4}" onchange="setMR('elbowK',this.value)">
-      <span class="form-label" style="width:auto">티 계수 (개/m)</span>
-      <input class="form-inp sm" type="number" step="0.05" min="0" value="${M.teeK??0.15}" onchange="setMR('teeK',this.value)">
-    </div>
-    <div class="form-row">
-      <span class="form-label">보온재</span>
-      <select onchange="setMR('insul',this.value)">
-        ${['고무발포 25T','고무발포 19T','유리면 50T','보온 없음'].map(o=>`<option${o===(M.insul||'고무발포 25T')?' selected':''}>${o}</option>`).join('')}
-      </select>
-      <span style="font-size:11px;color:var(--text2)">결로방지 보온 — 배관 길이에서 자동 산출</span>
-    </div>
-    <div style="font-size:11px;color:var(--text2)">
-      ※ 부속(엘보·티)은 개산율 방식 — 기계실은 배관 밀도가 높아 평면 카운트보다 개산이 실제에 가깝습니다. 계수는 사무소 기준에 맞게 조정하세요.<br>
-      ※ 산출 결과는 ③ 밸브 목록 하단과 엑셀(CSV)에 포함됩니다.
-    </div>
-  </div>`;
-
+  </aside></div>`;
   document.getElementById('settingsPanel').innerHTML=h;
+}
+
+// 입상관 상세 편집 (종전 그룹 카드 내용 — 경고 띠는 확인 목록으로 옮김)
+function groupEditor(g){
+  const B=S.building, fps=g.floorPipes||[];
+  let h=`<div class="group-card">
+    <div class="group-hdr">
+      <input class="group-name-inp" value="${esc(g.name)}" onchange="setGroupName('${g.id}',this.value)" placeholder="입상관명" aria-label="입상관명">
+      <select onchange="setGroupVal('${g.id}','pipe',this.value)" aria-label="입상관 관경">${PIPES.map(p=>`<option${p===g.pipe?' selected':''}>${p}</option>`).join('')}</select>
+      <label class="prv-check"><input type="checkbox"${g.allFloors?' checked':''} onchange="setGroupVal('${g.id}','allFloors',this.checked)"> 전 층</label>
+      ${g.allFloors?'':`<span class="muted sm">담당층</span>
+      <input class="zone-inp" type="number" min="1" style="width:56px" value="${g.fromFloor||''}" placeholder="—" onchange="setGroupVal('${g.id}','fromFloor',this.value?+this.value:null)" aria-label="담당 시작층">
+      <span class="muted sm">~</span>
+      <input class="zone-inp" type="number" min="1" style="width:56px" value="${g.toFloor||''}" placeholder="—" onchange="setGroupVal('${g.id}','toFloor',this.value?+this.value:null)" aria-label="담당 끝층">`}
+      <label class="prv-check"><input type="checkbox" ${g.prv?'checked':''} onchange="setGroupVal('${g.id}','prv',this.checked)"><span style="color:var(--warn)">감압밸브(PRV)</span></label>
+      <button class="btn btn-danger btn-sm ml" onclick="delGroup('${g.id}')">삭제</button>
+    </div>
+    <div class="zone-list">
+      <div class="fr" style="gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <span class="muted sm" style="font-weight:600">층별 주관</span>
+        <label class="prv-check"><input type="checkbox"${g.floorSame?' checked':''} onchange="setGroupVal('${g.id}','floorSame',this.checked)"> 모든 층 같음</label>
+        ${g.floorSame?`<select onchange="setGroupVal('${g.id}','floorPipe',this.value)" aria-label="층 주관 관경">${PIPES.map(p=>`<option${p===(g.floorPipe||'40A')?' selected':''}>${p}</option>`).join('')}</select>`
+          :`<button class="btn btn-ghost btn-sm" onclick="addFloorPipe('${g.id}')">+ 층 추가</button>`}
+      </div>`;
+  const rows=fps.map((fp,fi)=>({fp,fi})).filter(({fp})=>!g.floorSame||fp.prv);
+  h+=rows.map(({fp,fi})=>`<div class="zone-row">
+      <input class="zone-inp" type="number" min="1" value="${fp.floorNo||fi+1}" onchange="setFloorPipeProp('${g.id}',${fi},'floorNo',+this.value)" style="width:56px" aria-label="층"${g.floorSame?' disabled':''}>층
+      <select onchange="setFloorPipeProp('${g.id}',${fi},'pipe',this.value)" aria-label="층 주관 관경"${g.floorSame?' disabled':''}>${PIPES.map(p=>`<option${p===fp.pipe?' selected':''}>${p}</option>`).join('')}</select>
+      ${g.floorSame?'':`<span class="muted sm">수량</span><input class="zone-inp" type="number" min="1" value="${fp.qty||1}" onchange="setFloorPipeProp('${g.id}',${fi},'qty',+this.value)" style="width:50px" aria-label="수량">`}
+      <label class="prv-check" title="B안 층 분기 PRV 세트 (명세 7.5)"><input type="checkbox" ${fp.prv?'checked':''} onchange="setFloorPipeProp('${g.id}',${fi},'prv',this.checked)"><span style="color:var(--warn)">층 분기 PRV</span></label>
+      ${fp.prv?`<span class="muted sm">2차압</span><input class="zone-inp" type="number" step="0.1" min="0.5" max="10" style="width:56px" value="${fp.prvSet||''}" placeholder="${B.prvPressure}" onchange="setFloorPipeProp('${g.id}',${fi},'prvSet',this.value?+this.value:null)" aria-label="2차압">
+      <span class="muted sm">kgf/cm² = ${(floorPrvSet(fp)*KGF2KPA).toFixed(0)} kPa ${overMax(floorPrvSet(fp)*KGF2KPA)?'<b style="color:var(--red)">≥ 550</b>':'&lt; 550'} · 점검구 필수</span>`:''}
+      ${g.floorSame?'':`<button class="btn btn-danger btn-sm" onclick="delFloorPipe('${g.id}',${fi})" aria-label="층 주관 삭제">✕</button>`}
+    </div>`).join('');
+  if(!g.floorSame&&!fps.length) h+=`<span class="muted sm">층별 주관 없음</span>`;
+  if(g.floorSame) h+=`<span class="muted sm">${fps.length}개 층 · 각 ${g.floorPipe||'40A'} 1개 — 층마다 다르면 「모든 층 같음」을 끄세요</span>`;
+  h+=`</div>
+    <div class="zone-list" style="margin-top:6px">
+      <div class="fr" style="gap:6px;margin-bottom:6px"><span class="muted sm" style="font-weight:600">화장실(Zone)</span>
+        <button class="btn btn-ghost btn-sm" onclick="addZone('${g.id}')">+ 화장실 추가</button>
+        ${g.zones.length?`<span class="muted sm">BV ${g.zones.length}개</span>`:''}</div>
+      ${g.zones.map((z,zi)=>`<div class="zone-row">
+        <input class="zone-inp" value="${esc(z.name)}" placeholder="화장실명" onchange="setZoneProp('${g.id}',${zi},'name',this.value)" aria-label="화장실명">
+        <select onchange="setZoneProp('${g.id}',${zi},'pipe',this.value)" aria-label="화장실 관경">${PIPES.map(p=>`<option${p===z.pipe?' selected':''}>${p}</option>`).join('')}</select>
+        <button class="btn btn-danger btn-sm" onclick="delZone('${g.id}',${zi})" aria-label="화장실 삭제">✕</button></div>`).join('')}
+      ${!g.zones.length?`<span class="muted sm">화장실 없음</span>`:''}
+    </div></div>`;
+  return h;
+}
+function floorTableHTML(){
+  const B=S.building;
+  let h=`<div class="tbl-box"><table class="floor-table"><thead><tr><th>층</th><th>압력 (kgf/cm²)</th><th>상태</th></tr></thead><tbody>`;
+  for(let f=1;f<=B.floors;f++){
+    const p=floorPressure(f), over=overMax(floorPmax(f).p*KGF2KPA), fr=floorReqKPa(f), low=p*KGF2KPA<fr;
+    h+=`<tr${over?' class="floor-warn"':low?' class="floor-low"':''}><td>${f}층</td><td class="nw">${p.toFixed(2)} <span class="muted">(${(p*KGF2KPA).toFixed(0)} kPa)</span></td>
+      <td>${!supplySet()?'<span class="warn-chip">입력 필요</span>':over?`<span class="warn-chip">감압필요 ▶ PRV</span>`:low?`<span class="bad-chip">압력부족 (${fr} kPa 미만)</span>`:`<span class="ok-chip">적정</span>`}</td></tr>`;
+  }
+  return h+`</tbody></table></div><div class="fld-note" style="margin-top:8px">※ 압력은 운전 토출압 기준 정수두 값이며 배관 마찰손실은 별도입니다. 「감압필요」는 유량 0 최대압(P<sub>max</sub>, 미입력이면 토출압) 550 kPa 이상일 때 (KDS 31 30 15 4.7). 필요압은 그 층을 담당하는 입상관의 말단 기구 기준(샤워 혼합밸브 130 · 세정밸브 100 · 샤워 70 · 일반 55 kPa, 담당 없음 55).${S.system==='gravity'?'<br>※ 고가수조식은 최상층부 압력 부족 시 최상층 전용 가압펌프(부스터) 설치를 검토하세요.':''}</div>`;
+}
+function frictionHTML(){
+  const P=S.pump;
+  let h='';
+  if(S.system==='booster') h+=`<div class="form-row"><span class="form-label">기계실 배관 길이 (m)</span>
+      <input class="form-inp sm" type="number" step="1" value="${P.mrLen??8}" onchange="setPump('mrLen',+this.value)" aria-label="기계실 배관 길이">
+      <span class="muted sm">펌프 토출 ~ 입상관 분기까지 배관 길이 합계</span></div>`;
+  if(!S.groups.length) return h+`<div class="muted sm">입상관을 추가하고 유량을 입력하면 검토표가 나타납니다.</div>`;
+  h+=`<div class="tbl-box"><table class="floor-table fr-tbl"><thead><tr>
+    <th>입상관</th><th>유량<br>(L/min)</th><th>수평길이<br>(m)</th><th>말단 필요압</th><th>주요장치 손실<br>(kPa, 제조사)</th><th>수직<br>(자동)</th><th>부속 예비<br>(×1.4)</th><th>마찰손실<br>(kgf/cm²)</th><th>말단 예상압</th><th>판정</th></tr></thead><tbody>`;
+  for(const g of S.groups){
+    const r=groupFriction(g);
+    h+=`<tr><td style="font-weight:600">${esc(g.name)}${g.prv?' <span style="color:var(--warn);font-size:10px">PRV</span>':''}</td>
+      <td><input class="zone-inp" type="number" min="0" style="width:72px" value="${g.flowLpm||''}" placeholder="—" onchange="setGroupVal('${g.id}','flowLpm',this.value?+this.value:null)" aria-label="유량"></td>
+      <td><input class="zone-inp" type="number" min="0" style="width:64px" value="${g.horizLen||''}" placeholder="0" onchange="setGroupVal('${g.id}','horizLen',this.value?+this.value:null)" aria-label="수평길이"></td>
+      <td><select class="zone-inp" style="width:auto;max-width:190px" onchange="setGroupVal('${g.id}','reqKPa',+this.value)" aria-label="말단 필요압">${REQ_OPTS.map(([v,l])=>`<option value="${v}"${groupReqKPa(g)===v?' selected':''}>${l}</option>`).join('')}</select></td>
+      <td><input class="zone-inp" type="number" min="0" style="width:64px" value="${g.devLossKPa||''}" placeholder="0" onchange="setGroupVal('${g.id}','devLossKPa',this.value?+this.value:null)" aria-label="주요장치 손실"></td>`;
+    if(r) h+=`<td class="nw">${r.Lv.toFixed(1)}m</td><td class="nw">${r.Lfit.toFixed(1)}m</td><td class="nw">${(r.hf+r.hfMr).toFixed(2)}</td>
+      <td class="nw" style="font-weight:700">${r.endKPa.toFixed(0)} kPa<br><span style="font-weight:400" class="muted">(${r.endP.toFixed(2)} kgf/cm²)</span></td>
+      <td>${r.ok===null?'<span class="warn-chip">입력 필요</span>':r.ok?`<span class="ok-chip">적정 ≥${r.req}</span>`:`<span class="bad-chip">압력부족 &lt;${r.req} kPa</span>`}</td>`;
+    else h+=`<td colspan="5" class="muted">← 유량 입력 시 자동 계산</td>`;
+    h+=`</tr>`;
+  }
+  return h+`</tbody></table></div><div class="fld-note" style="margin-top:8px">
+    ※ 수평길이 = 입상관 분기에서 <strong>최상층의 가장 먼 화장실</strong>까지 수평 구간 합계(최불리 경로).<br>
+    ※ 수직길이는 (담당 최고층 − 1)×층고 개략. 부속·밸브 손실은 경로 미확정 <b>예비</b>로 직관장 ×1.4. 주요 장치 손실은 제조사 값을 kPa 로 입력.<br>
+    ※ 말단 예상압 = 시작압 − 최고층 정수두 − 마찰손실. PRV 입상관은 2차 설정압 기준${S.system==='booster'?', 비PRV 입상관은 펌프 토출압 기준(기계실 구간 손실 포함)':''}. ${supplySet()?'':'<b>공급압(펌프 토출압)이 입력되지 않아 판정은 「입력 필요」입니다.</b>'}</div>`;
+}
+function mrHTML(){
+  const P=S.pump, M=S.mr||{}, nPrv=S.groups.filter(g=>g.prv).length;
+  const row=(l,c,n='')=>`<div class="form-row"><span class="form-label">${l}</span>${c}${n?`<span class="muted sm">${n}</span>`:''}</div>`;
+  const inp=(k,d,st=1)=>`<input class="form-inp sm" type="number" min="0" step="${st}" value="${M[k]??d}" onchange="setMR('${k}',this.value)" aria-label="${k}">`;
+  let h=row('수도 인입관 직관 (m)',inp('inletLen',10),'계량기~저수조 직관');
+  if(S.system==='booster'){
+    h+=row('LCV 바이패스 (m)',inp('lcvBypLen',3,0.5),'인입 관경');
+    h+=row('펌프 흡입 배관 — 1대당 (m)',inp('suctionLen',4,0.5),`× ${pumpSets()}${P.set&&P.count===2?'조':'대'} = ${(((+M.suctionLen)||0)*pumpSets()).toFixed(1)}m 자동`);
+    h+=row('펌프 토출 배관 — 1대당 (m)',inp('dischargeLen',2,0.5),`× ${pumpSets()}${P.set&&P.count===2?'조':'대'} = ${(((+M.dischargeLen)||0)*pumpSets()).toFixed(1)}m 자동`);
+    h+=row('비상 바이패스 (m)',inp('emerBypLen',6,0.5),'인입 관경');
+  }
+  h+=row(S.system==='booster'?'토출 헤더·메인 (m)':'수조 출구·메인 (m)',`<strong>${P.mrLen??8} m</strong>`,'마찰손실 검토의 기계실 배관 길이와 공용');
+  if(nPrv) h+=row('PRV 세트당 배관 (m)',inp('prvSetLen',2,0.5),`× PRV ${nPrv}개소 자동`);
+  h+=row('엘보 개산 계수 (개/m)',inp('elbowK',0.4,0.05))+row('티 계수 (개/m)',inp('teeK',0.15,0.05));
+  h+=row('보온재',`<select onchange="setMR('insul',this.value)" aria-label="보온재">${['고무발포 25T','고무발포 19T','유리면 50T','보온 없음'].map(o=>`<option${o===(M.insul||'고무발포 25T')?' selected':''}>${o}</option>`).join('')}</select>`,'결로방지 보온 — 길이에서 자동 산출');
+  return h+`<div class="fld-note">※ 부속(엘보·티)은 개산율 방식. 산출 결과는 ③ 밸브 목록 하단과 엑셀(CSV)에 포함됩니다.</div>`;
 }
 
 // ── Tab 2: Diagram SVG ────────────────────────────────────────────────────────
@@ -1676,7 +1715,7 @@ function renderDiagram(){
       s+=svgLine(CX,y-11,CX,y+11);
       s+=svgLine(CX,y,CX+26,y);
       s+=symPG(CX+38,y);
-      s+=svgText(CX+52,y+4,'(게이지콕 포함)',TH.text2,7,'start');
+      s+=svgText(CX+70,y+4,'(게이지콕 포함)',TH.text2,7,'start');   // 「PG」 글자(CX+52) 오른쪽으로
     }
   });
   s+=svgText(CX-7,(INLET_Y+INLET_END)/2,inletPipe,TH.text2,8,'end');
@@ -1714,7 +1753,7 @@ function renderDiagram(){
       s+=svgText(BP_X+22,(LCV_TOP+LCV_BOT)/2-6,'(평상시 닫힘 NC)',SC.prv,7,'start');
     }
     // pipe labels
-    s+=svgText(CX-7,(LCV_BOT+TANK_Y)/2+4,inletPipe,TH.text2,8,'end');
+    if(nTank===1) s+=svgText(CX-7,(LCV_BOT+TANK_Y)/2+4,inletPipe,TH.text2,8,'end');   // 칸이 나뉘면 칸별 차단밸브 글자와 겹쳐 생략(관경은 위 인입관 표기와 같음)
   } else {
     // 고가수조식: 볼탭이 수위 조절 — 인입관 직결
     s+=svgLine(CX,INLET_END+10,CX,TANK_Y);
@@ -1739,11 +1778,11 @@ function renderDiagram(){
       s+=symShut(cx,brY+13,7);
       if(isBst) s+=symFJ(cx,brY+34);   // 수조 접속 플렉시블 — 목록 「저수조 입구 플렉시블조인트」
     });
-    s+=svgText(cellXs[0]-46,brY-4,'칸별 인입',SC.gv,7,'end');
+    s+=svgText(cellXs[0]-46,brY+16,'칸별 인입',SC.gv,7,'end');   // 「LCV 후단 배수」와 같은 높이라 아래로
   }
   cellXs.forEach(cx=>{ // 칸마다 볼탭
     s+=`<circle cx="${cx+22}" cy="${TANK_Y+18}" r="6" fill="none" stroke="${SC.gv}" stroke-width="1.5"/>`;
-    if(nTank===1) s+=svgText(cx+22,TANK_Y+34,'볼탭',SC.gv,7);
+    if(nTank===1) s+=svgText(cx+31,TANK_Y+21,'볼탭',SC.gv,7,'start');   // 수조 이름(가운데)과 겹쳐 볼탭 기호 오른쪽으로
   });
   if(nTank>1){
     // 칸별 청소용 배수밸브 (좌측 스텁) + 칸별 유출 차단 → 공통 헤더
@@ -1788,6 +1827,13 @@ function renderDiagram(){
       s+=symGV(px,PUMP_SUCK_Y+COMP_OFFSETS.gv1,8,'GV');
       s+=symST(px,PUMP_SUCK_Y+COMP_OFFSETS.st);
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj1);
+      // 흡입 연성계 — 펌프 흡입 측면 (CH-20261124-01). 패키지 포함이면 그리지 않는다
+      if(!PKG().pg){
+        const cgY=PUMP_SUCK_Y+(COMP_OFFSETS.fj1+COMP_OFFSETS.pump)/2-6;
+        s+=svgLine(px,cgY,px-20,cgY);
+        s+=symPG(px-30,cgY,'');
+        s+=svgText(px-44,cgY+4,'CG',SC.pg,8,'end');
+      }
       s+=symPump(px,PUMP_SUCK_Y+COMP_OFFSETS.pump,18,pumpLabels[i]);
       // 토출 압력계 — 펌프 토출 측면 (명세 3.6, 2026-10-28 정정: 흡입측 없음). 패키지 포함이면 그리지 않는다
       if(!PKG().pg){
@@ -1798,7 +1844,7 @@ function renderDiagram(){
         s+=svgText(px+66,pgY+4,'PG',SC.pg,8,'start');
       }
       s+=symFJ(px,PUMP_SUCK_Y+COMP_OFFSETS.fj2);
-      s+=svgText(px-7,PUMP_SUCK_Y+COMP_OFFSETS.fj2+18,pumpPipe,TH.text2,8,'end');
+      s+=svgText(px+8,PUMP_SUCK_Y+COMP_OFFSETS.fj2+18,pumpPipe,TH.text2,8,'start');   // 왼쪽 수격방지기 「WH」와 겹쳐 오른쪽으로
       // 수격방지기는 첵밸브 상류측(펌프측) — 학회 3.3.7 (1) 2). 첵밸브 파손 방지
       const whY=PUMP_SUCK_Y+(COMP_OFFSETS.fj2+COMP_OFFSETS.cv)/2;
       s+=svgLine(px,whY,px-30,whY);
@@ -1977,6 +2023,7 @@ function renderLegend(x,y){
     {sym:'av',lbl:'공기빼기(AV)'},
     {sym:'dv',lbl:'배수밸브(DV)'},
     {sym:'pg',lbl:'압력계(PG)'},
+    {sym:'pg',lbl:'연성계(CG)'},
     {sym:'wh',lbl:'수격방지기(WH)'},
     {sym:'ex',lbl:'신축이음(EX)'},
     {sym:'fj',lbl:'플렉시블(FJ)'},
@@ -2003,7 +2050,7 @@ function renderValveList(){
   const COLORS={'게이트밸브':SC.gv,'버터플라이밸브':SC.gv,'볼밸브':SC.bv,'체크밸브':SC.cv,
     '더블체크밸브':SC.cv,'감압밸브':SC.prv,
     '글로브밸브':SC.globe,'Y형 스트레이너':SC.st,'공기빼기밸브':SC.av,'배수밸브':SC.dv,
-    '압력계':SC.pg,'압력탱크':SC.pg,'수격방지기':SC.wh,'신축이음':SC.ex,'플렉시블조인트':SC.fj,
+    '압력계':SC.pg,'연성계':SC.pg,'압력탱크':SC.pg,'수격방지기':SC.wh,'신축이음':SC.ex,'플렉시블조인트':SC.fj,
     '유량계':SC.cv,'수도계량기':SC.cv,'볼탭':SC.gv,'수위조절밸브(LCV)':SC.lcv,
     '역류방지장치':SC.cv,'릴리프밸브':SC.prv,'수위 경보장치':SC.lcv,'이상수위 제어':SC.lcv,'경보 수신반':SC.lcv,'세목 스크린':SC.st};
 
@@ -2491,7 +2538,7 @@ function exportCSV(){
 // 숫자 입력 검증: NaN·범위 초과 방지
 function clampNum(v,min,max,fb){v=+v;if(!isFinite(v))return fb;return Math.min(max,Math.max(min,v));}
 const NUM_RULES={
-  pump:{count:[1,3,2],pressure:[0.1,30,7],pressureMax:[0,30,0],flow:[1,100000,300],mrLen:[0,300,8]},
+  pump:{count:[1,3,2],pressure:[0.1,30,7],pressureMax:[0,30,0],flow:[1,100000,300],mrLen:[0,300,8],head:[0,1000,0]},
   building:{floors:[1,120,5],floorHeight:[2,10,3.5],exConfirmed:[0,20,0],targetPressure:[0.5,10,3],prvPressure:[0.5,10,2.5],tankHeight:[0,30,3]}
 };
 // 펌프별 밸브·배관 조 수 — 「2대 (1대 예비, SET)」 이면 한 스키드라 1조, 그 밖에는 대수만큼 (2026-10-20 사용자 요청)
@@ -2531,10 +2578,11 @@ function normalizeState(){
   }
   if(!S.material)S.material='sts';
   S.mr=Object.assign(mrDefaults(),S.mr||{});
+  syncAll();
 }
 
 function addGroup(){
-  S.groups.push({id:uid(),name:`입상관 ${S.groups.length+1}`,pipe:'65A',prv:false,floorPipes:[],zones:[]});
+  S.groups.push({...defaultGroup(),name:`입상관 ${S.groups.length+1}`,pipe:'65A'});
   renderAll();
 }
 function delGroup(id){
@@ -2575,7 +2623,7 @@ function resetAll(){
   S.pump={count:2,set:true,pressure:7,flow:300,mainPipe:'100A',pumpPipe:'65A',inletPipe:'50A',mrLen:8};
   S.building={floors:5,floorHeight:3.5,targetPressure:3.0,prvPressure:2.5,tankHeight:3};
   S.inlet=inletDefaults(); S.tank=tankDefaults(); S.pumpPkg=pkgDefaults();
-  S.groups=[]; _id=1;
+  _id=1; S.groups=[defaultGroup()];
   try{localStorage.removeItem(LS_KEY);}catch{}
   document.getElementById('projectName').value='새 프로젝트';
   renderAll();
