@@ -379,6 +379,8 @@ function floorReqKPa(f){
 //   받는 칸 옆에 작은 회색 글씨로 출처. 자동으로 채우지 않는다. 압력 kgf/cm² 칸에는 kPa 환산을 함께 보인다.
 const SRC_STYLE='font-size:11px;color:var(--text2);white-space:nowrap';
 function srcTag(t){ return `<span class="src-tag" style="${SRC_STYLE}">← ${t}</span>`; }
+function kgfTag(v){ const n=+v; return `<span class="kpa-tag" style="${SRC_STYLE}">= ${isFinite(n)&&n>0?n.toFixed(2):'—'} kgf/cm²</span>`; }
+function setPmaxKPa(v){ const n=+v; setPump('pressureMax',(v===''||!isFinite(n)||n<=0)?0:n/KGF2KPA); }
 function kpaTag(v){ const n=+v; return `<span class="kpa-tag" style="${SRC_STYLE}">= ${isFinite(n)&&n>0?Math.round(n*KGF2KPA):'—'} kPa</span>`; }
 function floorPressure(floor){
   const B=S.building;
@@ -1218,7 +1220,7 @@ function renderSettings(){
   }
   h+=`<div class="vs-grid2">
       ${fld(`메인관 관경 ${srcTag('위생배관 MAIN')}`,sel(null,PIPES.map(p=>[p,p]),P.mainPipe,"setPump('mainPipe',this.value)"),isBst?'저수조 출구 · 펌프 흡입 · 토출 · 메인이 모두 이 관경 (펌프 노즐이 작으면 노즐 앞뒤 레듀서)':'수조 출구 · 메인')}
-      ${isBst?fld(`최대압 P<sub>max</sub> — 정지양정 kgf/cm² ${srcTag('위생배관 · 카탈로그(P_max)')}`,`<div class="inp-unit"><input class="f-inp" type="number" step="0.1" min="0" value="${P.pressureMax||''}" placeholder="—" onchange="setPump('pressureMax',this.value?+this.value:0)" aria-label="최대압 P_max">${kpaTag(P.pressureMax)}</div>`,'유량 0 점 — 감압 존(550 kPa) · 릴리프 · 압력등급에만 씀'):''}
+      ${isBst?fld(`최대압 P<sub>max</sub> — 정지양정 kPa ${srcTag('위생배관 · 카탈로그(P_max)')}`,`<div class="inp-unit"><input class="f-inp" type="number" step="1" min="0" value="${+P.pressureMax>0?Math.round(P.pressureMax*KGF2KPA):''}" placeholder="—" onchange="setPmaxKPa(this.value)" aria-label="최대압 P_max">${kgfTag(P.pressureMax)}</div>`,'유량 0 점 — 감압 존(550 kPa) · 릴리프 · 압력등급에만 씀'):''}
     </div></section>`;
 
   // ── 3 입상관 · 감압 존 ──

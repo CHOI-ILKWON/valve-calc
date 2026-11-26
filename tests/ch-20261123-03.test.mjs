@@ -187,13 +187,14 @@ test('받는 칸 출처 표시 · kPa 환산 · 안내 탭 순서표(⑤ 밸브 
   app.run('renderSettings(); renderHelp();');
   const st=app.els.settingsPanel.innerHTML, hp=app.els.helpPanel.innerHTML;
   for(const t of ['← 용량부하','← 위생배관 MAIN','← 위생배관 · 카탈로그(P_max)','← 위생배관 압력검토']) assert.ok(st.includes(t),t);
-  assert.match(st,/최대압 P<sub>max<\/sub>[\s\S]*?= 785 kPa/);
+  assert.match(st,/최대압 P<sub>max<\/sub> — 정지양정 kPa[\s\S]*?value=\"785\"[\s\S]*?= 8\.00 kgf\/cm²/);   // kPa 입력 + kgf/cm² 병기
   assert.match(st,/감압 설정압 kPa[\s\S]*?value="245"/);
   assert.match(hp,/앱 간 값 옮기기 순서/);
   assert.match(hp,/<tr style="font-weight:700"><td><strong>⑤<\/strong><\/td><td><strong>밸브<\/strong>/);
   assert.equal((hp.match(/font-weight:700"><td>/g)||[]).length,1);   // 굵게는 ⑤ 한 줄만
   assert.match(hp,/위생배관 — 압력검토/);
+  app.run(`setPmaxKPa('588');`); assert.ok(Math.abs(app.run('S.pump.pressureMax')*98.0665-588)<1e-9);
   // 자동 채움 없음 — 표시만
   app.run(`S.pump.pressureMax=0; renderSettings();`);
-  assert.match(app.els.settingsPanel.innerHTML,/최대압 P<sub>max<\/sub>[\s\S]*?= — kPa/);
+  assert.match(app.els.settingsPanel.innerHTML,/최대압 P<sub>max<\/sub>[\s\S]*?= — kgf\/cm²/);
 });
