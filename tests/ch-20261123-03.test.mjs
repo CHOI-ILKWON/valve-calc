@@ -28,8 +28,8 @@ const live=r=>r.list.filter(i=>i.grade!=='EXCLUDED');
 // 층고 4 m, P_max 를 직접 넣어 1층 유량 0 압력을 정확히 맞춘다
 function base(app,extra=''){
   app.run(`
-    S.building.floors=4; S.building.floorHeight=4; S.pump.pressure=6; S.pump.pressureSet=true; S.pump.pressureMax=0;
-    S.groups=[{id:'g1',name:'입상관 1',pipe:'50A',prv:false,fromFloor:1,toFloor:4,flowLpm:200,horizLen:20,reqKPa:100,
+    S.building.floors=4; S.building.floorHeight=4; S.pump.pressureMax=6;
+    S.groups=[{id:'g1',name:'입상관 1',pipe:'50A',prv:false,fromFloor:1,toFloor:4,reqKPa:100,
       floorPipes:[{id:'f1',floorNo:1,pipe:'40A',qty:1}],zones:[]}];
     ${extra}`);
 }
@@ -45,33 +45,31 @@ test('1-3 존 판정 — 유량 0 최대압이 정확히 550 kPa 이면 감압 �
   assert.equal(app.run('groupZoneCheck(S.groups[0])').need,false);
 });
 
-test('1-4 PRV 하류 릴리프 — targetPressure 가 아니라 상류 유량 0 최대압 ≥ 550 kPa', ()=>{
+test('1-4 PRV 하류 릴리프 — 상류 유량 0 최대압 ≥ 550 kPa', ()=>{
   const app=load();
-  // 상류 4.0 kgf/cm² ≈ 392 kPa: 종전(> targetPressure 3.0)이면 릴리프가 붙었지만 이제는 붙지 않는다
-  base(app,`S.pump.pressure=4; S.groups[0].prv=true;`);
+  // 상류 4.0 kgf/cm² ≈ 392 kPa → 릴리프 없음
+  base(app,`S.pump.pressureMax=4; S.groups[0].prv=true;`);
   let r=app.run('calcValves()');
   assert.equal(r.summary['릴리프밸브'],0);
   // 상류 6.0 kgf/cm² ≈ 588 kPa ≥ 550 → 릴리프 1
   base(app,`S.groups[0].prv=true;`);
   r=app.run('calcValves()');
   assert.equal(r.summary['릴리프밸브'],1);
-  // targetPressure 를 바꿔도 결과가 같다 (참고값)
-  app.run(`S.building.targetPressure=9;`);
-  assert.equal(app.run('calcValves()').summary['릴리프밸브'],1);
+  // P_max 미입력이면 판정하지 않는다(릴리프 없음, 확인 목록에 입력 요청) — 2026-11-26 토출압 예비 판정 폐지
+  app.run(`S.pump.pressureMax=0;`);
+  assert.equal(app.run('calcValves()').summary['릴리프밸브'],0);
+  assert.ok(app.run('allChecks()').some(x=>x.lv==='c'&&/P_max 미입력/.test(x.msg)));
 });
 
-test('1-4 층별 표·입상관 칩 — 550 kPa 기준, targetPressure 와 무관', ()=>{
-  const app=load(); base(app,`S.pump.pressure=4; S.building.targetPressure=3;`);
+test('1-4 위반 띠 — 550 kPa 기준. 설계 목표압력 · 층별 압력표 · 토출압 칸 삭제(2026-11-26)', ()=>{
+  const app=load(); base(app,`S.pump.pressureMax=4;`);
   app.run('renderSettings()');
-  const h=app.els.settingsPanel?.innerHTML||Object.values(app.els).map(e=>e.innerHTML).join('');
-  assert.doesNotMatch(h,/감압필요 ▶ PRV/);      // 392 kPa < 550
-  assert.doesNotMatch(h,/감압 존이 필요합니다/);   // CH-20261124-04: 입상관 칩 → 위반 띠
-  assert.match(h,/설계 목표압력/);
-  base(app,`S.pump.pressure=6;`);
+  const h=app.els.settingsPanel.innerHTML;
+  assert.doesNotMatch(h,/감압 존이 필요합니다/);   // 392 kPa < 550
+  assert.doesNotMatch(h,/설계 목표압력|층별 압력표|토출압 P<sub>op|마찰손실 검토|기계실 물량/);
+  base(app,`S.pump.pressureMax=6;`);
   app.run('renderSettings()');
-  const h2=Object.values(app.els).map(e=>e.innerHTML).join('');
-  assert.match(h2,/감압필요 ▶ PRV/);           // 1층 588 kPa
-  assert.match(h2,/감압 존이 필요합니다/);
+  assert.match(app.els.settingsPanel.innerHTML,/감압 존이 필요합니다/);   // 1층 588 kPa
 });
 
 test('1-5 needsPRV 삭제', ()=>{
@@ -99,12 +97,12 @@ test('1-6 → CH-20261124-01 펌프 흡입측 연성계(게이지콕 포함) 기
   app.run(`S.pumpPkg.pg=true;`); assert.equal(app.run('calcValves()').summary['연성계'],0);
 });
 
-test('2-6 최저 필요압 130 kPa 선택지 — 말단 판정에 쓰인다', ()=>{
+test('2-6 최저 필요압 130 kPa 선택지 — 감압 설정압 하한에 쓰인다', ()=>{
   const app=load();
   assert.ok(app.run('REQ_OPTS').some(([v,l])=>v===130&&/혼합밸브/.test(l)));
   base(app,`S.groups[0].reqKPa=130;`);
-  assert.equal(app.run('groupFriction(S.groups[0]).req'),130);
-  assert.equal(app.run('floorReqKPa(2)'),130);
+  const pr=app.run('prvRange(S.groups[0])');
+  assert.equal(pr.req,130); assert.ok(Math.abs(pr.lowKPa-(3*4*9.81+130))<0.01);
 });
 
 test('2-7 실패사례: 층 주관 미입력 → KDS 4.11(3) 층 차단밸브 경고, 입력하면 사라짐', ()=>{
@@ -116,20 +114,18 @@ test('2-7 실패사례: 층 주관 미입력 → KDS 4.11(3) 층 차단밸브 �
   assert.doesNotMatch(w,/층 차단밸브 0개/);
 });
 
-test('2-8 오버플로 관경 — 표 4.12-1 과 인입관+1단계 중 큰 값', ()=>{
+test('2-8 오버플로 관경 — 인입관 +1단계 자동 (최대 급수량 칸 삭제, 2026-11-26)', ()=>{
   const app=load();
-  app.run(`S.pump.inletPipe='50A'; S.tank.inflowLps=0;`);
-  let o=app.run('overflowSize()');
-  assert.equal(o.byInlet,65); assert.equal(o.byTable,null); assert.equal(o.dn,65);   // 유량 미입력 — 인입관 기준만
-  app.run(`S.tank.inflowLps=2;`);  o=app.run('overflowSize()'); assert.equal(o.byTable,50); assert.equal(o.dn,65);
-  app.run(`S.tank.inflowLps=10;`); o=app.run('overflowSize()'); assert.equal(o.byTable,80); assert.equal(o.dn,80);
-  app.run(`S.tank.inflowLps=3;`);  assert.equal(app.run('overflowSize()').byTable,65);  // 경계는 큰 관경(안전측)
-  app.run(`S.tank.inflowLps=70;`); assert.equal(app.run('overflowSize()').byTable,200);
-  app.run(`S.pump.inletPipe='80A'; S.tank.inflowLps=2;`); assert.equal(app.run('overflowSize()').dn,100);
-  base(app,`S.pump.inletPipe='50A'; S.tank.inflowLps=10;`);
+  app.run(`S.pump.inletPipe='50A';`); let o=app.run('overflowSize()');
+  assert.equal(o.byInlet,65); assert.equal(o.dn,65);
+  app.run(`S.pump.inletPipe='40A';`); assert.equal(app.run('overflowSize()').dn,50);
+  app.run(`S.pump.inletPipe='25A';`); assert.equal(app.run('overflowSize()').dn,50);
+  app.run(`S.pump.inletPipe='80A';`); assert.equal(app.run('overflowSize()').dn,100);
+  base(app,`S.pump.inletPipe='50A';`);
   const r=app.run('calcValves()');
-  assert.match(r.warnings.join('\n'),/오버플로관: O\.F 80A .*150 mm 이상.*방충망/);
-  assert.equal(r.list.find(i=>i.pos==='저수조 오버플로').pipe,'80A');
+  assert.match(r.warnings.join(String.fromCharCode(10)),/오버플로관 자동: O\.F 65A .*150 mm 이상.*방충망/);
+  assert.doesNotMatch(r.warnings.join(String.fromCharCode(10)),/최대 급수량/);
+  assert.equal(r.list.find(i=>i.pos==='저수조 오버플로').pipe,'65A');
 });
 
 test('2-14 계량기 후단 DCV 필수 — 자유낙수여도, 옛 저장값 dcv=off 여도 적용', ()=>{
@@ -173,27 +169,30 @@ test('U4 LCV 형식 — 전동·전자식이면 LCV 세트 수격방지기 1, �
 });
 
 test('화면 렌더 — 설정·계통도·목록 오류 없음 (전동 LCV·펌프 1대·층 주관 없음)', ()=>{
-  const app=load(); base(app,`S.inlet.lcvType='electric'; setPumpMode('1'); S.groups[0].floorPipes=[]; S.tank.inflowLps=5;`);
-  for(let i=0;i<4;i++) app.run(`switchTab(${i})`);
+  const app=load(); base(app,`S.inlet.lcvType='electric'; setPumpMode('1'); S.groups[0].floorPipes=[];`);
+  for(let i=0;i<5;i++) app.run(`switchTab(${i})`);
   const all=Object.values(app.els).map(e=>e.innerHTML).join('');
   assert.match(all,/LCV 형식/);
-  assert.match(all,/최대 급수량/);
+  assert.doesNotMatch(all,/최대 급수량/);
   assert.doesNotMatch(all,/undefined|NaN/);
+  // P_max 미입력이어도 NaN 이 화면에 나오지 않는다
+  app.run(`S.pump.pressureMax=0; S.groups[0].prv=true;`);
+  for(let i=0;i<5;i++) app.run(`switchTab(${i})`);
+  assert.doesNotMatch(Object.values(app.els).map(e=>e.innerHTML).join(''),/undefined|NaN/);
 });
 
 // CH-20261123-06 — 앱 간 값 옮기기 표기 (앱간_값옮기기_표기기준.md 2.2·2.4·3절)
-test('CH-06 받는 칸 출처 표시 · kPa 환산 · 안내 탭 순서표(④ 굵게)', ()=>{
-  const app=load(); base(app,`S.pump.pressure=7; S.pump.pressureMax=8; S.building.prvPressure=2.5;`);
+test('받는 칸 출처 표시 · kPa 환산 · 안내 탭 순서표(⑤ 밸브 굵게, 2026-11-26 순서)', ()=>{
+  const app=load(); base(app,`S.pump.pressureMax=8; S.groups[0].prv=true; S.groups[0].prvSet=2.5;`);
   app.run('renderSettings(); renderHelp();');
   const st=app.els.settingsPanel.innerHTML, hp=app.els.helpPanel.innerHTML;
-  // 용량부하 상자 번호 순서 ①유효용량 ②칸 수 ③펌프 구성 ④Q, 카탈로그 P_op·P_max
-  for(const t of ['← 용량부하 ①','← 용량부하 ②','← 용량부하 ③','← 용량부하 ④','← 카탈로그(P_op)','← 카탈로그(P_max)']) assert.ok(st.includes(t),t);
-  assert.match(st,/토출압 P<sub>op<\/sub>[\s\S]*?← 카탈로그\(P_op\)[\s\S]*?= 686 kPa/);
-  assert.match(st,/최대압 P<sub>max<\/sub>[\s\S]*?← 카탈로그\(P_max\)[\s\S]*?= 785 kPa/);
-  assert.match(st,/감압밸브 설정압[\s\S]*?= 245 kPa/);
+  for(const t of ['← 용량부하','← 위생배관 MAIN','← 위생배관 · 카탈로그(P_max)','← 위생배관 압력검토']) assert.ok(st.includes(t),t);
+  assert.match(st,/최대압 P<sub>max<\/sub>[\s\S]*?= 785 kPa/);
+  assert.match(st,/감압 설정압 kPa[\s\S]*?value="245"/);
   assert.match(hp,/앱 간 값 옮기기 순서/);
-  assert.match(hp,/<tr style="font-weight:700"><td><strong>④<\/strong><\/td><td><strong>밸브<\/strong>/);
-  assert.equal((hp.match(/font-weight:700"><td>/g)||[]).length,1);   // 굵게는 ④ 한 줄만
+  assert.match(hp,/<tr style="font-weight:700"><td><strong>⑤<\/strong><\/td><td><strong>밸브<\/strong>/);
+  assert.equal((hp.match(/font-weight:700"><td>/g)||[]).length,1);   // 굵게는 ⑤ 한 줄만
+  assert.match(hp,/위생배관 — 압력검토/);
   // 자동 채움 없음 — 표시만
   app.run(`S.pump.pressureMax=0; renderSettings();`);
   assert.match(app.els.settingsPanel.innerHTML,/최대압 P<sub>max<\/sub>[\s\S]*?= — kPa/);

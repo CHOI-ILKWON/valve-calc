@@ -27,9 +27,9 @@ function load(){
 // 4층, 층고 4 m, 토출 6 kgf/cm² — 유량 0 압력 1층 588 · 2층 549 · 3층 510 · 4층 471 kPa → 1층만 550 초과
 function base(app,extra=''){
   app.run(`
-    S.building.floors=4; S.building.floorHeight=4; S.pump.pressure=6; S.pump.pressureSet=true; S.pump.pressureMax=0;
+    S.building.floors=4; S.building.floorHeight=4; S.pump.pressureMax=6;
     S.inlet.prvBypass=false;
-    S.groups=[{id:'g1',name:'입상관 1',pipe:'50A',prv:false,fromFloor:1,toFloor:4,flowLpm:200,horizLen:20,reqKPa:100,
+    S.groups=[{id:'g1',name:'입상관 1',pipe:'50A',prv:false,fromFloor:1,toFloor:4,reqKPa:100,
       floorPipes:[{id:'f1',floorNo:1,pipe:'40A',qty:1},{id:'f4',floorNo:4,pipe:'40A',qty:1}],zones:[]}];
     ${extra}`);
 }
@@ -40,15 +40,15 @@ test('B안 층 분기 PRV — 그룹 PRV 세트와 같은 구성·순서, 관경
   const r=app.run('calcValves()');
   const rows=rowsAt(r,'1층 분기');
   assert.deepEqual(rows.map(i=>i.spec),[
-    '게이트밸브(입구차단)','Y형 스트레이너(시트보호)','압력계(1차압, 게이지콕 포함)','감압밸브(PRV)',
-    '압력계(2차압, 게이지콕 포함)','게이트밸브(출구차단)','— 미적용 —','릴리프밸브(하류 과압 방출)']);
+    '볼밸브(입구차단)','Y형 스트레이너(시트보호)','압력계(1차압, 게이지콕 포함)','감압밸브(PRV)',
+    '압력계(2차압, 게이지콕 포함)','볼밸브(출구차단)','— 미적용 —','릴리프밸브(하류 과압 방출)']);
   for(const i of rows) assert.equal(i.pipe,'40A');
-  // 바이패스 기본 제외
+  // 바이패스 「없음」을 고른 경우(base) — 미적용 행
   const bp=rows.find(i=>i.pos.endsWith('바이패스'));
   assert.equal(bp.qty,0); assert.equal(bp.grade,app.run('GRADE.EXC'));
-  // 설정압 미입력 = 감압밸브 설정압, 두 기준 함께 표시
+  // 설정압 미입력 = 하한(같은 층 말단 필요압 100 kPa), kPa 병기. 목표압력 문구 없음(2026-11-26 삭제)
   const prv=rows.find(i=>i.name==='감압밸브');
-  assert.match(prv.note,/설정압 2\.5kgf/); assert.match(prv.note,/설계 목표압력 3\(참고\)/); assert.match(prv.note,/550 kPa/);
+  assert.match(prv.note,/설정압 100 kPa \(1\.02 kgf\/cm²\) · 미입력 — 하한값/); assert.doesNotMatch(prv.note,/목표압력/);
   // 층 분기 BV 바로 다음에 PRV 세트
   const iBV=r.list.findIndex(i=>i.spec==='볼밸브(1층 주관 차단)');
   assert.equal(r.list[iBV+1].pos,'입상관 1 1층 분기 PRV 입구');
@@ -62,31 +62,31 @@ test('층 분기 PRV 수량이 집계(합계)에 들어간다 — qty 개소만�
   app.run(`S.groups[0].floorPipes[0].prv=true; S.groups[0].floorPipes[0].qty=2;`);
   const s1=app.run('calcValves().summary');
   assert.equal(s1['감압밸브']-s0['감압밸브'],2);
-  assert.equal(s1['게이트밸브']-s0['게이트밸브'],4);
+  assert.equal(s1['볼밸브']-s0['볼밸브'],5);   // 40A → PRV 앞뒤 차단 볼 2×2 + 층 주관 볼 1개 늘어남(qty 1→2)
   assert.equal(s1['Y형 스트레이너']-s0['Y형 스트레이너'],2);
   assert.equal(s1['압력계']-s0['압력계'],4);
   assert.equal(s1['릴리프밸브']-s0['릴리프밸브'],2);   // 1층 상류 유량 0 최대압 588 kPa ≥ 550 (CH-20261123-03)
 });
 
-test('바이패스 「설치」면 층 분기 PRV 에도 바이패스 행이 붙는다', ()=>{
+test('바이패스 「있음」이면 층 분기 PRV 에도 샘플대로 글로브 1개(NC)', ()=>{
   const app=load(); base(app,`S.groups[0].floorPipes[0].prv=true; S.inlet.prvBypass=true;`);
   const r=app.run('calcValves()');
   const bp=rowsAt(r,'1층 분기 바이패스');
-  assert.equal(bp.length,2); assert.equal(bp[0].qty,2); assert.equal(bp[1].name,'글로브밸브');
-  assert.equal(bp[0].state,'NC');
+  assert.equal(bp.length,1); assert.equal(bp[0].name,'글로브밸브'); assert.equal(bp[0].qty,1);
+  assert.equal(bp[0].state,'NC'); assert.equal(bp[0].grade,app.run('GRADE.DEF'));
 });
 
-test('그룹 PRV 세트 행은 리팩터링 전과 같다 (위치·규격·비고)', ()=>{
+test('그룹 PRV 세트 행 (위치·규격·비고) — 50A 라 차단은 볼밸브', ()=>{
   const app=load(); base(app,`S.groups[0].prv=true;`);
   const r=app.run('calcValves()');
   const rows=r.list.filter(i=>/^입상관 1 (PRV|바이패스)/.test(i.pos));
   assert.deepEqual(rows.map(i=>[i.pos,i.spec,i.qty,i.note]),[
-    ['입상관 1 PRV 입구','게이트밸브(입구차단)',1,'PRV 입구'],
+    ['입상관 1 PRV 입구','볼밸브(입구차단)',1,'PRV 입구'],
     ['입상관 1 PRV','Y형 스트레이너(시트보호)',1,'감압밸브 전'],
     ['입상관 1 PRV','압력계(1차압, 게이지콕 포함)',1,'PRV 전'],
-    ['입상관 1 PRV','감압밸브(PRV)',1,'설정압 2.5kgf/cm²'],
+    ['입상관 1 PRV','감압밸브(PRV)',1,'설정압 218 kPa (2.22 kgf/cm²) · 미입력 — 하한값'],   // 미입력 → 하한 (4−1)×4 m + 100 kPa = 218 kPa
     ['입상관 1 PRV','압력계(2차압, 게이지콕 포함)',1,'PRV 후'],
-    ['입상관 1 PRV 출구','게이트밸브(출구차단)',1,'PRV 출구'],
+    ['입상관 1 PRV 출구','볼밸브(출구차단)',1,'PRV 출구'],
     ['입상관 1 바이패스','— 미적용 —',0,''],
     ['입상관 1 PRV 하류','릴리프밸브(하류 과압 방출)',1,'PRV 고장 시 하류 보호 — 상류 유량 0 최대압 588 kPa ≥ 550 kPa'],
   ]);
@@ -96,20 +96,24 @@ test('실패사례: 저층·고층 혼재 + 저층 550 kPa 초과 + PRV 없음 �
   const app=load(); base(app);
   const z=app.run(`groupZoneCheck(S.groups[0])`);
   assert.equal(z.state,'mixed'); assert.deepEqual(z.uncovered,[1]);
-  assert.ok(z.loKPa>550); assert.equal(z.prelim,true);   // P_max 미입력 → 예비
+  assert.ok(z.loKPa>550); assert.equal(z.prelim,false);
   const w=app.run('calcValves().warnings').filter(x=>x.startsWith('입상관 1:'));
-  assert.ok(w.some(x=>/A안/.test(x)&&/B안/.test(x)&&/시작점 PRV 1개로는/.test(x)&&/예비/.test(x)));
+  assert.ok(w.some(x=>/A안/.test(x)&&/B안/.test(x)&&/시작점 PRV 1개로는/.test(x)));
 });
 
-test('실패사례: 시작점 PRV 1개로 혼재 그룹 — 최상층 말단 부족이면 해결 불가 표시', ()=>{
-  const app=load();
-  // 2차 2.5 kgf → 1층 유량 0 = 245 kPa (≤550) 이지만 4층 말단 = 2.5 − 1.2 − 마찰 < 100 kPa
-  base(app,`S.groups[0].prv=true;`);
+test('시작점 PRV 1개 — 설정압이 범위 안이면 해결, 하한 미만·상한 이상이면 해결 불가', ()=>{
+  const app=load(); base(app,`S.groups[0].prv=true;`);
+  // 미입력 → 하한 218 kPa 로 본다 → 1층 유량 0 = 218 kPa < 550, 최상층 높이 + 필요압 충족
+  assert.equal(app.run(`groupZoneCheck(S.groups[0])`).state,'solved');
+  const pr=app.run('prvRange(S.groups[0])');
+  assert.ok(Math.abs(pr.lowKPa-(3*4*9.81+100))<0.01); assert.equal(pr.upKPa,550);
+  // 1.5 kgf(147 kPa) — 최상층 부족 → 해결 불가
+  app.run(`S.groups[0].prvSet=1.5`);
   const z=app.run(`groupZoneCheck(S.groups[0])`);
-  assert.equal(z.state,'riserMixed');
-  assert.match(z.msg,/최상층 말단/); assert.match(z.msg,/A안/);
-  // 2차압을 올려 최상층을 맞추면 저층이 550 초과 → 역시 해결 불가
-  app.run(`S.building.prvPressure=6`);
+  assert.equal(z.state,'riserMixed'); assert.match(z.msg,/최상층/); assert.match(z.msg,/A안/);
+  assert.ok(app.run('allChecks()').some(x=>x.lv==='v'&&/하한/.test(x.msg)));
+  // 6 kgf — 1층이 550 이상 → 해결 불가
+  app.run(`S.groups[0].prvSet=6`);
   const z2=app.run(`groupZoneCheck(S.groups[0])`);
   assert.equal(z2.state,'riserMixed'); assert.deepEqual(z2.uncovered,[1]);
 });
@@ -130,7 +134,7 @@ test('실패사례: 층 분기 PRV 2차압을 550 kPa 넘게 설정하면 미해
 test('P_max 입력 시 최대압은 정지양정 기준(예비 아님), 마찰을 빼지 않는다', ()=>{
   const app=load(); base(app,`S.pump.pressureMax=5.5; S.groups[0].fromFloor=2; S.groups[0].toFloor=4;`);
   const z=app.run(`groupZoneCheck(S.groups[0])`);
-  // 2층: 5.5 − 0.4 = 5.1 kgf = 500 kPa ≤ 550 → 감압 불필요 (토출압 6 이면 2층 549 — 경계)
+  // 2층: 5.5 − 0.4 = 5.1 kgf = 500 kPa ≤ 550 → 감압 불필요
   assert.equal(z.prelim,false); assert.equal(z.need,false); assert.equal(z.state,'ok');
   assert.ok(Math.abs(z.loKPa-5.1*98.0665)<0.01);
 });
@@ -159,5 +163,5 @@ test('화면 렌더 — 설정·계통도·목록에 층 분기 PRV 가 나타�
   // 혼재 경고 박스
   base(app);
   app.run('renderSettings();');
-  assert.match(app.els.settingsPanel.innerHTML,/존 판정/);
+  assert.match(app.els.settingsPanel.innerHTML,/감압 존이 필요합니다/);
 });
