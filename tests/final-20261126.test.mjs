@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-const src=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const src=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).sort((a,b)=>b.length-a.length)[0];   // 가장 긴 것이 앱 본문 (유료화 init·구독 스크립트 제외)
 function load(saved=null){
   const el=()=>({innerHTML:'',value:'',addEventListener(){},classList:{toggle(){}},click(){}});
   const els={};

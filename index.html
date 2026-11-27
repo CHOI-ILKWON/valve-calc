@@ -197,6 +197,28 @@ table.vlist tr:hover td{background:rgba(255,255,255,.02)}
 </style>
 </head>
 <body>
+
+<!-- 2026-11-27 유료화 (웹앱_유료화_기준.md, CH-20261127-02) — 구글 로그인 → 7일 무료(+피드백 7일) → 앱별 평생이용권 -->
+<div id="auth-gate"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="auth.js?v=5"></script>
+<script>
+  // ====== 판매 설정 (기존 관리 시트를 네 앱이 같이 쓴다 — 위생배관 apps-script/README.md) ======
+  MEPAuth.init({
+    clientId:  "631559035777-ara2uhplj7ds41ehfrr97cef8jlj4rip.apps.googleusercontent.com",
+    apiUrl:    "https://script.google.com/macros/s/AKfycbzOwmnJdBeqkH4QMdbQRagHXFnOA7sXnkQDmGeerVi4mYUF9WL_vB3C8LIq1-AZekQX/exec",
+    appId:     "valve",                 // 라이선스 시트의 「앱」 칸 값
+    appName:   "밸브 계통도 계산서",
+    trialDays: 7, bonusDays: 7,         // 백엔드 CONFIG.TRIAL_DAYS · TRIAL_BONUS_DAYS 와 같게
+    priceSingle: 40000,                 // 앱별 평생이용권
+    priceBundle: 0,                     // 전 앱 팩 — 0 이면 표시하지 않음
+    bankInfo:  "카카오뱅크 3333-07-0554442 (최일권)"
+  });
+  // ================================================================================
+</script>
+
+<div id="app-content" style="display:none;">
 <header>
   <span class="logo">🔧 밸브 계통도 계산서</span>
   <input id="projectName" type="text" placeholder="프로젝트명">
@@ -2639,6 +2661,8 @@ document.getElementById('projectName').value=S.projectName||'';
 // 처음 방문자는 사용법 탭, 작업하던 사용자는 계통 설정 탭으로
 switchTab(hadSaved?1:0);
 </script>
+
+</div><!-- /#app-content -->
 
 <!-- 새 기능 소식 구독 (로그인 없음, 90초 뒤 1회 노출, 거절하면 30일간 안 뜸) -->
 <script src="https://choi-ilkwon.github.io/js/subscribe.js?v=2"></script>
